@@ -18,7 +18,13 @@
 <button md-button>All</button>
 <button md-raised-button>Of</button>
 <button md-raised-button color="primary">The</button>
-<button md-raised-button color="accent">Buttons</button>
+<button md-raised-button color="accent" (click)="launchCounter()">Launch Counter</button>
+<p>
+  Sent: {{sentMessage}}
+</p>
+<p>
+  Received: {{message}}
+</p>
 </md-card>
 
 <span class="done">
@@ -26,5 +32,6 @@
   <md-icon>check circle</md-icon>
 </button>
 </span>
+
 
 
