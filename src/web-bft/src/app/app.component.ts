@@ -1,6 +1,6 @@
-import { Component, OnInit } from '@angular/core';
-import { WebsocketService } from './websocket.service';
-import { Subject, Observable, Subscription } from 'rxjs/Rx';
+import {Component, OnInit} from '@angular/core';
+import {WebsocketService} from './websocket.service';
+import {Subject, Observable, Subscription} from 'rxjs/Rx';
 
 @Component({
   selector: 'app-root',
@@ -16,7 +16,7 @@ export class AppComponent implements OnInit {
   private sentMessage: string;
 
   constructor(websocketService: WebsocketService) {
-    this.socket = websocketService.createWebsocket();
+    this.socket = websocketService.createWebsocket('wss://echo.websocket.org');
   }
 
   ngOnInit() {
