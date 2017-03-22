@@ -9,7 +9,8 @@ body {
 }
 
 md-card {
-  max-width: 80%;
+  max-width: 1024px;
+  witdth: 80%;
   margin: 2em auto;
   text-align: center;
 }
