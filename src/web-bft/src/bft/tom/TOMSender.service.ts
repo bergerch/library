@@ -78,7 +78,10 @@ export abstract class TOMSender implements ReplyReceiver, Closeable {
    */
    TOMulticastData(m: any, reqId: number, reqType: TOMMessageType) {
 
-  }
-  
+   }
+
+   sendMessageToTargets(m: any, reqId: number, targets: number[], type: TOMMessageType, operationsId?: number) {
+
+   }
 
 }

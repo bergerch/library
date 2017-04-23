@@ -36,12 +36,13 @@ export class ServiceProxy {
 
   requestType: TOMMessageType;
   replies: TOMMessage[] = []; // Replies from replicas are stored here
+  response: TOMMessage  = null; // Reply delivered to the application
 
   // Comparator<byte[]> comparator;
   // Extractor extractor;
   // Random rand = new Random(System.currentTimeMillis());
   // HashResponseController hashResponseController;
-  // TOMMessage response = null; // Reply delivered to the application
+
 
 
   public ServiceProxy() {
