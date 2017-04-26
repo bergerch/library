@@ -4,6 +4,7 @@
 
 import {Injectable} from '@angular/core';
 import {TOMMessage, TOMMessageType} from "./ServiceProxy.service";
+import {CommunicationSystemClientSide} from "../communication/CommunicationSystemClientSide.service";
 
 
 export interface ReplyReceiver {
@@ -30,6 +31,15 @@ export interface Closeable {
 
 @Injectable()
 export abstract class TOMSender implements ReplyReceiver, Closeable {
+
+  me: number; // process id
+  clientViewController: object;
+  session: number = 0; // session id
+  sequence: number = 0; // sequence number
+  unorderedMessageSequence: number = 0; // sequence number for readonly messages
+  communicationSystemClientSide: CommunicationSystemClientSide; // client side comunication system
+  useSignatures: boolean = false; // use MACs or signatures
+  opCounter: number = 0; // Atomic counter
 
   public TOMSender() {
 
