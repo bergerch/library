@@ -15,7 +15,7 @@ export interface ReplyReceiver {
    *
    * @param reply The reply delivered by the client side comunication system
    */
-   replyReceived(reply: TOMMessage);
+  replyReceived(reply: TOMMessage);
 
 }
 
@@ -70,14 +70,14 @@ export abstract class TOMSender implements ReplyReceiver, Closeable {
   }
 
 
-    /**
-     * Multicast a TOMMessage to the group of replicas
-     *
-     * @param sm Message to be multicast
-     */
-    TOMulticastTOM(sm: TOMMessage) {
+  /**
+   * Multicast a TOMMessage to the group of replicas
+   *
+   * @param sm Message to be multicast
+   */
+  TOMulticastTOM(sm: TOMMessage) {
     //cs.send(useSignatures, this.viewController.getCurrentViewProcesses(), sm);
-    }
+  }
 
   /**
    * Multicast data to the group of replicas
@@ -86,12 +86,12 @@ export abstract class TOMSender implements ReplyReceiver, Closeable {
    * @param reqId unique integer that identifies this request
    * @param reqType TOM_NORMAL, TOM_READONLY or TOM_RECONFIGURATION
    */
-   TOMulticastData(m: any, reqId: number, reqType: TOMMessageType) {
+  TOMulticastData(m: any, reqId: number, reqType: TOMMessageType) {
 
-   }
+  }
 
-   sendMessageToTargets(m: any, reqId: number, targets: number[], type: TOMMessageType, operationsId?: number) {
+  sendMessageToTargets(m: any, reqId: number, targets: number[], type: TOMMessageType, operationsId?: number) {
 
-   }
+  }
 
 }

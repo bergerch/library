@@ -17,12 +17,12 @@ export interface ICommunicationSystemClientSide {
 }
 
 @Injectable()
-export class CommunicationSystemClientSide implements ICommunicationSystemClientSide{
+export class CommunicationSystemClientSide implements ICommunicationSystemClientSide {
 
   clientId: number;
   trr: ReplyReceiver;
   clientViewController: Object;
-  sessionTable = new Map<string, string>();
+  sessionTable: Map<string, string> = new Map<string, string>();
   reentrantReadWriteLock: Object;
 
   //the signature engine used in the system
@@ -57,7 +57,6 @@ export class CommunicationSystemClientSide implements ICommunicationSystemClient
   reconnect() {
 
   }
-
 
 
 }
