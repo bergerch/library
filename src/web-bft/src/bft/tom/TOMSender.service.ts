@@ -33,7 +33,7 @@ export interface Closeable {
 export abstract class TOMSender implements ReplyReceiver, Closeable {
 
   me: number; // process id
-  clientViewController: object;
+  clientViewController: Object;
   session: number = 0; // session id
   sequence: number = 0; // sequence number
   unorderedMessageSequence: number = 0; // sequence number for readonly messages
