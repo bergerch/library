@@ -21,12 +21,12 @@ export class CommunicationSystemClientSide implements ICommunicationSystemClient
 
   clientId: number;
   trr: ReplyReceiver;
-  clientViewController: object;
-  sessionTable = new Map<string, string>();
-  reentrantReadWriteLock: object;
+  clientViewController: Object;
+  sessionTable: Map<string, string> = new Map<string, string>();
+  reentrantReadWriteLock: Object;
 
   //the signature engine used in the system
-  signatureEngine: object;
+  signatureEngine: Object;
   ignatureLength: number;
   closed: boolean = false;
 
@@ -57,7 +57,6 @@ export class CommunicationSystemClientSide implements ICommunicationSystemClient
   reconnect() {
 
   }
-
 
 
 }

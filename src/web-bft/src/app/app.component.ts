@@ -14,6 +14,7 @@ export class AppComponent implements OnInit {
   private counterSubscription: Subscription;
   private message: string;
   private sentMessage: string;
+  private counter: number = 0;
 
   constructor(websocketService: WebsocketService) {
     this.socket = websocketService.createWebsocket('wss://echo.websocket.org');
@@ -31,7 +32,8 @@ export class AppComponent implements OnInit {
 
     let counter = Observable.interval(1000);
     this.counterSubscription = counter.subscribe(num => {
-      this.sentMessage = 'Websocket Message ' + num;
+      this.counter = num;
+      this.sentMessage = 'Websocket Message ' + this.counter;
       this.socket.next(this.sentMessage);
     });
   }

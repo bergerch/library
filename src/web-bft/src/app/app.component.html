@@ -16,7 +16,12 @@
 
 <md-card>
 
-<button md-raised-button color="accent" (click)="launchCounter()">Launch Counter</button>
+  <md-input-container>
+    <input mdInput placeholder="Counter State" value="{{counter}}">
+  </md-input-container>
+
+  <button md-raised-button color="accent" (click)="launchCounter()">Launch Counter</button>
+  <button md-raised-button color="primary" (click)="launchCounter()">Halt Counter</button>
 <p>
   Sent Message: {{sentMessage}}
 </p>

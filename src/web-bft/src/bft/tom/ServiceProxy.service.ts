@@ -2,6 +2,7 @@
  * Created by chris on 23.04.17.
  */
 import {Injectable} from '@angular/core';
+import {TOMSender} from "./TOMSender.service";
 
 export enum TOMMessageType {
   ORDERED_REQUEST = 0,
@@ -24,7 +25,7 @@ export interface TOMMessage {
 }
 
 @Injectable()
-export class ServiceProxy {
+export class ServiceProxy extends TOMSender {
 
   reqId: number = -1;
   operationId: number = -1;
@@ -36,7 +37,7 @@ export class ServiceProxy {
 
   requestType: TOMMessageType;
   replies: TOMMessage[] = []; // Replies from replicas are stored here
-  response: TOMMessage  = null; // Reply delivered to the application
+  response: TOMMessage = null; // Reply delivered to the application
 
   // Comparator<byte[]> comparator;
   // Extractor extractor;
@@ -44,9 +45,20 @@ export class ServiceProxy {
   // HashResponseController hashResponseController;
 
 
-
   public ServiceProxy() {
 
+  }
+
+  /**
+   * This is the method invoked by the client side communication system, and where the
+   * code to handle the reply is to be written.
+   *
+   * @Overwrite TOMSender's replyReceived
+   *
+   * @param reply The reply delivered by the client side communication system
+   */
+  replyReceived(reply: TOMMessage) {
+    // TODO
   }
 
   invokeOrdered(request) {
