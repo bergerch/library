@@ -29,7 +29,7 @@ export class ServiceProxy extends TOMSender {
 
   reqId: number = -1;
   operationId: number = -1;
-  replyQuorum: number = 0; // size of the reply quorum
+  replyQuorum: number = 4; // size of the reply quorum
   receivedReplies: number = 0; // Number of received replies
   invokeTimeout: number = 40;
   replyServer: number;
@@ -74,7 +74,20 @@ export class ServiceProxy extends TOMSender {
   }
 
   invoke(request, reqType) {
+    // Clean all statefull data to prepare for receiving next replies
+    this.replies = [];
+    this.receivedReplies = 0;
+    this.response = null;
+    // this.replyQuorum = this.getReplyQuorum();
+
+    // Send the request to the replicas, and get its ID
+    this.reqId = this.generateRequestId(reqType);
+    this.operationId = this.generateOperationId();
+    this.requestType = reqType;
+    this.replyServer = -1;
+
     // TODO
+
   }
 
   private reconfigureTo(view) {
