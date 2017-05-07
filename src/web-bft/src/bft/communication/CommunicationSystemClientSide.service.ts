@@ -17,7 +17,7 @@ export interface ICommunicationSystemClientSide {
 }
 
 @Injectable()
-export class CommunicationSystemClientSide implements ICommunicationSystemClientSide{
+export class CommunicationSystemClientSide implements ICommunicationSystemClientSide {
 
   clientId: number;
   trr: ReplyReceiver;
