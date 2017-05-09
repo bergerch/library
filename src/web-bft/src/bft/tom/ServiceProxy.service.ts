@@ -74,6 +74,8 @@ export class ServiceProxy extends TOMSender {
   }
 
   invoke(request, reqType) {
+    console.log('Service Proxy invoke() called with ', request, reqType);
+
     // Clean all statefull data to prepare for receiving next replies
     this.replies = [];
     this.receivedReplies = 0;

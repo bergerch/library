@@ -1,36 +1,35 @@
-
 <md-toolbar color="primary">
- <md-slide-toggle
-  class="example-margin"
-  [color]="color"
-  [(ngModel)]="bft_enabled">
-   BFT-Mode
-</md-slide-toggle>
+  <md-slide-toggle
+    class="example-margin"
+    [color]="color"
+    [(ngModel)]="bft_enabled">
+    BFT-Mode
+  </md-slide-toggle>
 
-<span>{{title}}</span>
+  <span>{{title}}</span>
 
-<button md-icon-button [md-menu-trigger-for]="menu">
-  <md-icon>more_vert</md-icon>
-</button>
+  <button md-icon-button [md-menu-trigger-for]="menu">
+    <md-icon>more_vert</md-icon>
+  </button>
 </md-toolbar>
 
 <md-menu x-position="before" #menu="mdMenu">
-<button md-menu-item>Option 1</button>
-<button md-menu-item>Option 2</button>
+  <button md-menu-item>Option 1</button>
+  <button md-menu-item>Option 2</button>
 </md-menu>
 
 <md-card>
 
   <md-input-container>
-    <input mdInput placeholder="Counter State"  [(ngModel)]="counterValue">
+    <input mdInput placeholder="Counter State" [(ngModel)]="counterValue">
   </md-input-container>
 
   <button md-raised-button color="accent" (click)="launchCounter()">Launch Counter</button>
   <button md-raised-button color="primary" (click)="haltCounter()">Halt Counter</button>
-<p>
-  Sent Message: {{sentMessage}}
-</p>
-<p>
-  Received Message: {{message}}
-</p>
+  <p>
+    Sent Message: {{sentMessage}}
+  </p>
+  <p>
+    Received Message: {{message}}
+  </p>
 </md-card>
