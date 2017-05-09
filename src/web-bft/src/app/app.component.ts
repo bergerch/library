@@ -24,6 +24,7 @@ export class AppComponent implements OnInit {
   counter: Observable<any>;
   color = 'accent';
   bft_enabled = false;
+  reply: any;
 
   constructor(websocketService: WebsocketService, private counterProxy: ServiceProxy) {
     this.socket = websocketService.createWebsocket('wss://echo.websocket.org');
@@ -45,7 +46,7 @@ export class AppComponent implements OnInit {
       this.counterSubscription = this.counter.subscribe((num) => {
         this.countChange.emit(this.counterValue);
         this.sentMessage = 'Websocket Message ' + this.counterValue;
-        this.counterProxy.invokeOrdered({counter: this.counterValue, iterations: this.iterations});
+        this.reply = this.counterProxy.invokeOrdered({counter: this.counterValue, iterations: this.iterations});
         console.log('application called counterProxy.invokeOrdered() with ', {
           counter: this.counterValue,
           iterations: this.iterations

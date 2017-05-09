@@ -61,19 +61,19 @@ export class ServiceProxy extends TOMSender {
     // TODO
   }
 
-  invokeOrdered(request) {
+  invokeOrdered(request): any {
     return this.invoke(request, 'TOMMessageType.ORDERED_REQUEST');
   }
 
-  invokeUnordered(request) {
+  invokeUnordered(request): any {
     return this.invoke(request, 'TOMMessageType.UNORDERED_REQUEST');
   }
 
-  invokeUnorderedHashed(request) {
+  invokeUnorderedHashed(request): any {
     return this.invoke(request, 'TOMMessageType.UNORDERED_HASHED_REQUEST');
   }
 
-  invoke(request, reqType) {
+  invoke(request, reqType): any {
     console.log('Service Proxy invoke() called with ', request, reqType);
 
     // Clean all statefull data to prepare for receiving next replies
