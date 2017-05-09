@@ -30,8 +30,8 @@ export class CommunicationSystemClientSide implements ICommunicationSystemClient
   ignatureLength: number;
   closed: boolean = false;
 
-  public CommunicationSystemClientSide() {
-
+  constructor() {
+    // TODO
   }
 
   send(sign: boolean, targets: number[], sm: TOMMessage) {

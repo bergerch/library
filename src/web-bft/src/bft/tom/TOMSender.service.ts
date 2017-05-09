@@ -34,17 +34,20 @@ export interface Closeable {
 export abstract class TOMSender implements ReplyReceiver, Closeable {
 
   me: number; // process id
-  clientViewController: Object;
   session: number = 0; // session id
   sequence: number = 0; // sequence number
   unorderedMessageSequence: number = 0; // sequence number for readonly messages
-  cs: CommunicationSystemClientSide; // client side comunication system
+  cs: CommunicationSystemClientSide; // client side communication system
   useSignatures: boolean = false; // use MACs or signatures
   opCounter: number = 0; // Atomic counter
-  viewController: ViewController;
+  protected viewController: ViewController;
 
-  public TOMSender() {
+  constructor() {
 
+  }
+
+  public getViewController() {
+    return this.viewController;
   }
 
   /**
@@ -53,13 +56,14 @@ export abstract class TOMSender implements ReplyReceiver, Closeable {
    *
    * @param reply The reply delivered by the client side communication system
    */
-  replyReceived(reply: TOMMessage) {}
+  public replyReceived(reply: TOMMessage) {
+  }
 
-  close() {
+  public close() {
 
   };
 
-  init(processId: number, configHome: string) {
+  public init(processId: number, configHome: string) {
 
   }
 
@@ -93,7 +97,7 @@ export abstract class TOMSender implements ReplyReceiver, Closeable {
    *
    * @param sm Message to be multicast
    */
-  TOMulticast(sm: TOMMessage) {
+  public TOMulticast(sm: TOMMessage) {
     this.cs.send(this.useSignatures, this.viewController.getCurrentView().processes, sm);
   }
 
@@ -104,12 +108,13 @@ export abstract class TOMSender implements ReplyReceiver, Closeable {
    * @param reqId unique integer that identifies this request
    * @param reqType TOM_NORMAL, TOM_READONLY or TOM_RECONFIGURATION
    */
-  TOMulticastData(m: any, reqId: number, reqType: TOMMessageType, operationsId?: number) {
+  public TOMulticastData(m: any, reqId: number, reqType: TOMMessageType, operationsId?: number) {
 
     let operatId = operationsId ? operationsId : -1;
     this.cs.send(this.useSignatures, this.viewController.getCurrentView().processes,
-      {viewID: this.me, type: reqType, session: this.session, sequence: reqId, operationId: operatId, content: m});
+      new TOMMessage(this.me, this.session, reqId, operatId, m, this.getViewController().getCurrentView().id, reqType));
   }
+
 
   sendMessageToTargets(m: any, reqId: number, targets: number[], type: TOMMessageType, operationsId?: number) {
 

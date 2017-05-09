@@ -3,6 +3,7 @@
  */
 import {Injectable} from '@angular/core';
 import {TOMSender} from "./TOMSender.service";
+import {HashResponseController} from "./HashResponseController.controller";
 
 export enum TOMMessageType {
   ORDERED_REQUEST = 0,
@@ -14,14 +15,45 @@ export enum TOMMessageType {
   UNORDERED_HASHED_REQUEST = 6
 }
 
-export interface TOMMessage {
-  viewID: number;
+@Injectable()
+export abstract class SystemMessage {
+
+  sender: number; // ID of the process which sent the message
+  authenticated: boolean;
+  // set to TRUE if the message was received
+  // with a (valid) mac, FALSE if no mac was given
+  // note that if the message arrives with an
+  // invalid MAC, it won't be delivered
+
+  constructor(sender: number) {
+    this.sender = sender;
+  }
+
+  public setSender(sender: number) {
+    this.sender = sender;
+  }
+}
+
+@Injectable()
+export class TOMMessage extends SystemMessage {
+  viewId: number;
   type: TOMMessageType; // request type: application or reconfiguration request
   session: number; // Sequence number defined by the client
   // There is a sequence number for ordered and another for unordered messages
   sequence: number;
   operationId: number; // Sequence number defined by the client
   content: any; // Content of the message
+
+  constructor(sender: number, session: number, reqId: number, operationId: number, request: any, viewId: number,
+              requestType: TOMMessageType) {
+    super(sender);
+    this.session = session;
+    this.sequence = reqId;
+    this.operationId = operationId;
+    this.content = request;
+    this.viewId = viewId;
+    this.type = requestType;
+  }
 }
 
 @Injectable()
@@ -38,16 +70,12 @@ export class ServiceProxy extends TOMSender {
   requestType: TOMMessageType;
   replies: TOMMessage[] = []; // Replies from replicas are stored here
   response: TOMMessage = null; // Reply delivered to the application
+  hashResponseController: HashResponseController;
 
   // Comparator<byte[]> comparator;
   // Extractor extractor;
   // Random rand = new Random(System.currentTimeMillis());
-  // HashResponseController hashResponseController;
 
-
-  public ServiceProxy() {
-
-  }
 
   /**
    * This is the method invoked by the client side communication system, and where the
@@ -88,9 +116,34 @@ export class ServiceProxy extends TOMSender {
     this.requestType = reqType;
     this.replyServer = -1;
 
-    // TODO
+    if (reqType == TOMMessageType.UNORDERED_HASHED_REQUEST) {
+
+      this.replyServer = this.getRandomlyServerId();
+
+
+      // let hashResponseController = new HashResponseController(getViewManager().getCurrentViewPos(replyServer),
+      //   getViewManager().getCurrentViewProcesses().length);
+
+      /*let sm: TOMMessage = new TOMMessage(getProcessId(), getSession(), reqId, operationId, request,
+       getViewManager().getCurrentViewId(), requestType);
+       sm.setReplyServer(replyServer);
+
+       TOMulticast(sm);
+       } else {
+       TOMulticast(request, reqId, operationId, reqType);
+       }*/
+
+    }
 
   }
+
+  getRandomlyServerId(): number {
+    let numServers: number = super.getViewController().getCurrentViewProcesses().length;
+    let pos =  Math.random() * numServers;
+
+    return super.getViewController().getCurrentViewProcesses()[pos];
+  }
+
 
   private reconfigureTo(view) {
     // TODO

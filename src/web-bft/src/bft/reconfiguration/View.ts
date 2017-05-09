@@ -10,7 +10,7 @@ export class View {
   processes: number[];
   addresses: Map<number, InternetAddress>;
 
-  public View(id: number, processes: number[], f: number, addresses: InternetAddress[]) {
+  constructor(id: number, processes: number[], f: number, addresses: InternetAddress[]) {
     this.id = id;
     this.f = f;
     this.processes = processes;

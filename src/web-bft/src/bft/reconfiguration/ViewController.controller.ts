@@ -15,12 +15,15 @@ export class ViewController {
   currentView: View = null;
   viewStore: ViewStorage;
 
-  public ViewController() {
-    // TODO
+  constructor() {
+
   }
 
+  public getCurrentViewProcesses() {
+    return this.getCurrentView().processes;
+  }
 
-  getCurrentView(): View {
+  public getCurrentView(): View {
     if (this.currentView == null) {
       // this.currentView = getViewStore().readView();
     }
