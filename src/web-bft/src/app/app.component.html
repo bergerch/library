@@ -1,6 +1,11 @@
 
 <md-toolbar color="primary">
-<span><md-icon>cloud_queue</md-icon></span>
+ <md-slide-toggle
+  class="example-margin"
+  [color]="color"
+  [(ngModel)]="bft_enabled">
+   BFT-Mode
+</md-slide-toggle>
 
 <span>{{title}}</span>
 
@@ -17,11 +22,11 @@
 <md-card>
 
   <md-input-container>
-    <input mdInput placeholder="Counter State" value="{{counter}}">
+    <input mdInput placeholder="Counter State"  [(ngModel)]="counterValue">
   </md-input-container>
 
   <button md-raised-button color="accent" (click)="launchCounter()">Launch Counter</button>
-  <button md-raised-button color="primary" (click)="launchCounter()">Halt Counter</button>
+  <button md-raised-button color="primary" (click)="haltCounter()">Halt Counter</button>
 <p>
   Sent Message: {{sentMessage}}
 </p>
@@ -29,11 +34,3 @@
   Received Message: {{message}}
 </p>
 </md-card>
-
-<!--
-<span class="done">
-<button md-fab>
-  <md-icon>check circle</md-icon>
-</button>
-</span>
--->
