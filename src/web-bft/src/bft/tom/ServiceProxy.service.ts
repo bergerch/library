@@ -139,7 +139,8 @@ export class ServiceProxy extends TOMSender {
 
   getRandomlyServerId(): number {
     let numServers: number = super.getViewController().getCurrentViewProcesses().length;
-    let pos =  Math.random() * numServers;
+    // TODO Unsure if this will actually work properly?
+    let pos = Math.round(Math.random() * numServers);
 
     return super.getViewController().getCurrentViewProcesses()[pos];
   }

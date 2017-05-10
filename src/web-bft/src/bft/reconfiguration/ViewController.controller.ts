@@ -1,12 +1,8 @@
 import {Injectable} from '@angular/core';
 import {View} from "./View";
+import {ViewStorage} from "./ViewStorage.interface";
+import {TOMConfiguration} from "../config/TOMConfiguration";
 
-export interface  ViewStorage {
-
-  toreView(View: View): boolean;
-  readView(): View;
-
-}
 
 @Injectable()
 export class ViewController {
@@ -15,8 +11,8 @@ export class ViewController {
   currentView: View = null;
   viewStore: ViewStorage;
 
-  constructor() {
-
+  constructor(procId: number, TOMConfiguration: TOMConfiguration) {
+  //Config.
   }
 
   public getCurrentViewProcesses() {

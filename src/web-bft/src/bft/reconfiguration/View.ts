@@ -1,6 +1,5 @@
 import {Injectable} from '@angular/core';
-import {InternetAddress} from "../config/Config";
-
+import {InternetAddress} from "../config/TOMConfiguration";
 
 @Injectable()
 export class View {
