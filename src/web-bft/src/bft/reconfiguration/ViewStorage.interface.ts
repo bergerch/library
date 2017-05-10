@@ -2,7 +2,7 @@ import {View} from "./View";
 
 export interface  ViewStorage {
 
-  storeView(View: View): boolean;
+  storeView(View: View): void;
   readView(): View;
 
 }
