@@ -1,4 +1,5 @@
 import {Injectable} from "@angular/core";
+import {HostsConfig} from "../reconfiguration/util/HostsConfig.config";
 
 
 @Injectable()

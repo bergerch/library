@@ -5,7 +5,8 @@
 import {Injectable} from '@angular/core';
 import {TOMMessage, TOMMessageType} from "./ServiceProxy.service";
 import {CommunicationSystemClientSide} from "../communication/CommunicationSystemClientSide.service";
-import {ViewController} from "../reconfiguration/ViewController.controller";
+import {ClientViewController} from "../reconfiguration/ClientViewController.controller";
+import {TOMConfiguration} from "../config/TOMConfiguration";
 
 
 export interface ReplyReceiver {
@@ -40,10 +41,11 @@ export abstract class TOMSender implements ReplyReceiver, Closeable {
   cs: CommunicationSystemClientSide; // client side communication system
   useSignatures: boolean = false; // use MACs or signatures
   opCounter: number = 0; // Atomic counter
-  protected viewController: ViewController;
+  protected viewController: ClientViewController;
 
-  constructor() {
 
+  constructor(private TOMConfiguration: TOMConfiguration) {
+    this.TOMConfiguration = TOMConfiguration;
   }
 
   public getViewController() {
@@ -60,11 +62,12 @@ export abstract class TOMSender implements ReplyReceiver, Closeable {
   }
 
   public close() {
-
+    this.cs.close();
   };
 
   public init(processId: number, configHome: string) {
-
+    this.viewController = new ClientViewController(processId, this.TOMConfiguration);
+    this.startsCS(processId);
   }
 
   startsCS(clientId: number) {

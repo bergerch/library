@@ -2,12 +2,13 @@ import {Component, Input, Output, EventEmitter, OnInit} from '@angular/core';
 import {WebsocketService} from './websocket.service';
 import {Subject, Observable, Subscription} from 'rxjs/Rx';
 import {ServiceProxy} from "../bft/tom/ServiceProxy.service";
+import {TOMConfiguration} from "../bft/config/TOMConfiguration";
 
 @Component({
   selector: 'app-root',
   templateUrl: './app.component.html',
   styleUrls: ['./app.component.css'],
-  providers: [ServiceProxy]
+  providers: [ServiceProxy, TOMConfiguration]
 })
 export class AppComponent implements OnInit {
   @Input() count = 0;

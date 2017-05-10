@@ -4,6 +4,7 @@
 import {Injectable} from '@angular/core';
 import {TOMSender} from "./TOMSender.service";
 import {HashResponseController} from "./HashResponseController.controller";
+import {TOMConfiguration} from "../config/TOMConfiguration";
 
 export enum TOMMessageType {
   ORDERED_REQUEST = 0,
@@ -121,7 +122,7 @@ export class ServiceProxy extends TOMSender {
       this.replyServer = this.getRandomlyServerId();
 
 
-      // let hashResponseController = new HashResponseController(getViewManager().getCurrentViewPos(replyServer),
+      //let hashResponseController = new HashResponseController(getViewManager().getCurrentViewPos(replyServer),
       //   getViewManager().getCurrentViewProcesses().length);
 
       /*let sm: TOMMessage = new TOMMessage(getProcessId(), getSession(), reqId, operationId, request,
