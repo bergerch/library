@@ -12,7 +12,7 @@ export class ViewController {
   viewStore: ViewStorage;
 
   constructor(procId: number, TOMConfiguration: TOMConfiguration) {
-  //Config.
+    //Config.
   }
 
   public getCurrentViewProcesses() {

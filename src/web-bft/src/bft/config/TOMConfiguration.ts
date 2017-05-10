@@ -40,7 +40,7 @@ export class TOMConfiguration {
 
     // Replicas ID for the initial view, separated by a comma.
     // The number of replicas in this parameter should be equal to that specified in 'system.servers.num'
-  initial_view = [0,1,2,3];
+  initial_view = [0, 1, 2, 3];
 
   // The ID of the trust third party (TTP)
   ttp_id = 7002;
@@ -51,8 +51,8 @@ export class TOMConfiguration {
 
   /** Communication Configurations */
 
-  // MAC algorithm used to authenticate messages between processes (HmacMD5 is the default value)
-  // This parameter is not currently being used being used
+    // MAC algorithm used to authenticate messages between processes (HmacMD5 is the default value)
+    // This parameter is not currently being used being used
   hmacAlgorithm = 'HmacSHA1';
 
   // Specify if the communication system should use a thread to send data (true or false)
@@ -65,7 +65,7 @@ export class TOMConfiguration {
 
   /** Replication Algorithm Configurations */
 
-  // Number of servers in the group
+    // Number of servers in the group
   n = 4;
 
   // Maximum number of faulty replicas
@@ -105,10 +105,9 @@ export class TOMConfiguration {
   shutdownhook = true;
 
 
-
   /** State Transfer Configurations */
 
-  // Activate the state transfer protocol ('true' to activate, 'false' to de-activate)
+    // Activate the state transfer protocol ('true' to activate, 'false' to de-activate)
   state_transfer = true;
 
   // Maximum ahead-of-time message not discarded

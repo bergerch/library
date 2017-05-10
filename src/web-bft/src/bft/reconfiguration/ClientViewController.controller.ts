@@ -1,4 +1,3 @@
-
 import {Injectable} from "@angular/core";
 import {ViewController} from "./ViewController.controller";
 import {TOMConfiguration} from "bft/config/TOMConfiguration";
@@ -11,7 +10,7 @@ export class ClientViewController extends ViewController {
   }
 
 
-  public updateCurrentViewFromRepository(): void{
+  public updateCurrentViewFromRepository(): void {
     //this.currentView = getViewStore().readView();
   }
 
