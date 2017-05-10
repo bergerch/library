@@ -41,4 +41,20 @@ export class View {
     return -1;
   }
 
+  public getId(): number {
+    return this.id;
+  }
+
+  public getF(): number {
+    return this.f;
+  }
+
+  public getN(): number {
+    return this.processes.length;
+  }
+
+  public getProcesses(): number[] {
+    return this.processes;
+  }
+
 }

@@ -45,7 +45,14 @@ export abstract class TOMSender implements ReplyReceiver, Closeable {
 
 
   constructor(private TOMConfiguration: TOMConfiguration) {
-    this.TOMConfiguration = TOMConfiguration;
+  }
+
+  /**
+   * Wrapper method
+   * @returns {ClientViewController}
+   */
+  public getViewManager() {
+    return this.getViewController();
   }
 
   public getViewController() {

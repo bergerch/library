@@ -5,6 +5,8 @@ import {Injectable} from '@angular/core';
 import {TOMSender} from "./TOMSender.service";
 import {HashResponseController} from "./HashResponseController.controller";
 import {TOMConfiguration} from "../config/TOMConfiguration";
+import {Comparator} from "./util/Comparator.interface";
+import {Extractor} from "bft/tom/util/Extractor.interface";
 
 export enum TOMMessageType {
   ORDERED_REQUEST = 0,
@@ -62,7 +64,7 @@ export class ServiceProxy extends TOMSender {
 
   reqId: number = -1;
   operationId: number = -1;
-  replyQuorum: number = 4; // size of the reply quorum
+  replyQuorum: number = 2; // size of the reply quorum (!)TODO Load from Config
   receivedReplies: number = 0; // Number of received replies
   invokeTimeout: number = 40;
   replyServer: number;
@@ -71,12 +73,40 @@ export class ServiceProxy extends TOMSender {
   requestType: TOMMessageType;
   replies: TOMMessage[] = []; // Replies from replicas are stored here
   response: TOMMessage = null; // Reply delivered to the application
+
   hashResponseController: HashResponseController;
 
-  // Comparator<byte[]> comparator;
-  // Extractor extractor;
-  // Random rand = new Random(System.currentTimeMillis());
+  comparator: Comparator<any>;
+  extractor: Extractor;
 
+
+  constructor(TOMConfiguration: TOMConfiguration) {
+    super(TOMConfiguration);
+
+     // FIXME Why is this still undefined?
+     //this.replies = new TOMMessage[super.getViewManager().getCurrentView().getN()];
+
+    this.comparator = (this.comparator != null) ? this.comparator : {
+      compare: function (o1: any, o2: any): number {
+        return JSON.stringify(o1) === JSON.stringify(o2) ? 0 : -1;
+      }
+    };
+
+    this.extractor = (this.extractor != null) ? this.extractor : {
+      extractResponse: function (replies: TOMMessage[], sameContent: number, lastReceived: number) {
+        return replies[lastReceived];
+      }
+    };
+
+  }
+
+  public setExtractor(extractor: Extractor) {
+    this.extractor = extractor;
+  }
+
+  public setComparator(comparator: Comparator<any>) {
+    this.comparator = comparator;
+  }
 
   /**
    * This is the method invoked by the client side communication system, and where the

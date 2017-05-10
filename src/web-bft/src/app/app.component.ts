@@ -3,6 +3,8 @@ import {WebsocketService} from './websocket.service';
 import {Subject, Observable, Subscription} from 'rxjs/Rx';
 import {ServiceProxy} from "../bft/tom/ServiceProxy.service";
 import {TOMConfiguration} from "../bft/config/TOMConfiguration";
+import {Comparator} from "../bft/tom/util/Comparator.interface";
+import {Extractor} from "../bft/tom/util/Extractor.interface";
 
 @Component({
   selector: 'app-root',
