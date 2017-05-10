@@ -84,7 +84,7 @@ export class ServiceProxy extends TOMSender {
     super(TOMConfiguration);
 
     // FIXME Why is this still undefined?
-    this.replies = new TOMMessage[super.getViewManager().getCurrentView().getN()];
+    // this.replies = new TOMMessage[super.getViewManager().getCurrentView().getN()];
 
     this.comparator = (this.comparator != null) ? this.comparator : {
       compare: function (o1: any, o2: any): number {
