@@ -47,11 +47,11 @@ export class AppComponent implements OnInit {
       this.counterSubscription = this.counter.subscribe((num) => {
         this.countChange.emit(this.counterValue);
         this.sentMessage = 'Websocket Message ' + this.counterValue;
-        this.reply = this.counterProxy.invokeOrdered({counter: this.counterValue, iterations: this.iterations});
         console.log('application called counterProxy.invokeOrdered() with ', {
           counter: this.counterValue,
           iterations: this.iterations
         });
+        this.reply = this.counterProxy.invokeUnorderedHashed({counter: this.counterValue, iterations: this.iterations});
       });
 
     } else {

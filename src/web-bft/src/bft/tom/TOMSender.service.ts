@@ -45,6 +45,9 @@ export abstract class TOMSender implements ReplyReceiver, Closeable {
 
 
   constructor(private TOMConfiguration: TOMConfiguration) {
+
+    this.viewController = new ClientViewController(this.me, this.TOMConfiguration);
+
   }
 
   /**
@@ -84,7 +87,7 @@ export abstract class TOMSender implements ReplyReceiver, Closeable {
   generateRequestId(type: TOMMessageType): number {
     // TODO: if multi-threaded implement lock here
     let id;
-    if (type == TOMMessageType.ORDERED_REQUEST) {
+    if (type === TOMMessageType.ORDERED_REQUEST) {
       id = this.sequence++;
     } else {
       id = this.unorderedMessageSequence++;

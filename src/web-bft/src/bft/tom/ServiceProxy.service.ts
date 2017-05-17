@@ -7,6 +7,7 @@ import {HashResponseController} from "./HashResponseController.controller";
 import {TOMConfiguration} from "../config/TOMConfiguration";
 import {Comparator} from "./util/Comparator.interface";
 import {Extractor} from "bft/tom/util/Extractor.interface";
+import {ClientViewController} from "../reconfiguration/ClientViewController.controller";
 
 export enum TOMMessageType {
   ORDERED_REQUEST = 0,
@@ -16,6 +17,7 @@ export enum TOMMessageType {
   ASK_STATUS = 4,
   STATUS_REPLY = 5,
   UNORDERED_HASHED_REQUEST = 6
+
 }
 
 @Injectable()
@@ -120,20 +122,22 @@ export class ServiceProxy extends TOMSender {
     // TODO
   }
 
-  invokeOrdered(request): any {
-    return this.invoke(request, 'TOMMessageType.ORDERED_REQUEST');
+  public invokeOrdered(request): any {
+    return this.invoke(request, TOMMessageType.ORDERED_REQUEST);
   }
 
-  invokeUnordered(request): any {
-    return this.invoke(request, 'TOMMessageType.UNORDERED_REQUEST');
+  public invokeUnordered(request): any {
+    return this.invoke(request, TOMMessageType.UNORDERED_REQUEST);
   }
 
-  invokeUnorderedHashed(request): any {
-    return this.invoke(request, 'TOMMessageType.UNORDERED_HASHED_REQUEST');
+  public invokeUnorderedHashed(request): any {
+    return this.invoke(request, TOMMessageType.UNORDERED_HASHED_REQUEST);
   }
 
-  invoke(request, reqType): any {
-    console.log('Service Proxy invoke() called with ', request, reqType);
+  private invoke(request, reqType: number): any {
+    console.log('Service Proxy invoke() called with ', request);
+    console.log('Request Type is ', reqType);
+    console.log(this);
 
     // Clean all statefull data to prepare for receiving next replies
     this.replies = [];
@@ -145,15 +149,23 @@ export class ServiceProxy extends TOMSender {
     this.reqId = this.generateRequestId(reqType);
     this.operationId = this.generateOperationId();
     this.requestType = reqType;
-    this.replyServer = -1;
 
-    if (reqType == TOMMessageType.UNORDERED_HASHED_REQUEST) {
+    this.replyServer = -1;
+    this.hashResponseController = null;
+
+    if (reqType === TOMMessageType.UNORDERED_HASHED_REQUEST) {
 
       this.replyServer = this.getRandomlyServerId();
 
 
-      //let hashResponseController = new HashResponseController(getViewManager().getCurrentViewPos(replyServer),
-      //   getViewManager().getCurrentViewProcesses().length);
+      let viewController: ClientViewController = this.getViewManager();
+      console.log('view controller: ', viewController);
+
+
+      let hashResponseController = new HashResponseController(viewController.getCurrentViewPos(this.replyServer),
+        viewController.getCurrentViewProcesses().length);
+      console.log('hashResponseController: ', hashResponseController);
+
 
       /*let sm: TOMMessage = new TOMMessage(getProcessId(), getSession(), reqId, operationId, request,
        getViewManager().getCurrentViewId(), requestType);
@@ -168,12 +180,13 @@ export class ServiceProxy extends TOMSender {
 
   }
 
-  getRandomlyServerId(): number {
+  private getRandomlyServerId(): number {
     let numServers: number = super.getViewController().getCurrentViewProcesses().length;
     // TODO Unsure if this will actually work properly?
     let pos = Math.round(Math.random() * numServers);
-
-    return super.getViewController().getCurrentViewProcesses()[pos];
+    let id = super.getViewController().getCurrentViewProcesses()[pos];
+    console.log('getRandomlyServerId ', id);
+    return id;
   }
 
 

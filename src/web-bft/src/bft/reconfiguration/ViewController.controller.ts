@@ -26,6 +26,10 @@ export class ViewController {
     return this.currentView;
   }
 
+  public getCurrentViewPos(id: number): number {
+  return this.getCurrentView().getPos(id);
+  }
+
   public getViewStore(): ViewStorage {
     if (this.viewStore == null) {
 
