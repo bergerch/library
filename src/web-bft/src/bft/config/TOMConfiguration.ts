@@ -11,7 +11,7 @@ export interface InternetAddress {
 
 }
 
-export interface Host {
+export interface Host extends InternetAddress {
 
   server_id: number;
   address: string;

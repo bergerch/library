@@ -13,7 +13,8 @@ export class ViewController {
   viewStore: ViewStorage;
 
   public constructor(procId: number, TOMConfiguration: TOMConfiguration) {
-    // TODO Config.
+    
+    this.currentView = new View(0, TOMConfiguration.initial_view, TOMConfiguration.f, TOMConfiguration.hosts);
   }
 
   public getCurrentViewProcesses() {
