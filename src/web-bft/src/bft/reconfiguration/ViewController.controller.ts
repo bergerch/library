@@ -13,7 +13,7 @@ export class ViewController {
   viewStore: ViewStorage;
 
   public constructor(procId: number, TOMConfiguration: TOMConfiguration) {
-    
+
     this.currentView = new View(0, TOMConfiguration.initial_view, TOMConfiguration.f, TOMConfiguration.hosts);
   }
 
@@ -29,7 +29,11 @@ export class ViewController {
   }
 
   public getCurrentViewPos(id: number): number {
-  return this.getCurrentView().getPos(id);
+    return this.getCurrentView().getPos(id);
+  }
+
+  public getCurrentViewId() {
+    return this.currentView.id;
   }
 
   public getViewStore(): ViewStorage {

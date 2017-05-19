@@ -169,9 +169,13 @@ export class ServiceProxy extends TOMSender {
       console.log('hashResponseController: ', hashResponseController);
 
 
-      /*let sm: TOMMessage = new TOMMessage(getProcessId(), getSession(), reqId, operationId, request,
-       getViewManager().getCurrentViewId(), requestType);
-       sm.setReplyServer(replyServer);
+      let sm: TOMMessage = new TOMMessage(this.me, this.session, this.reqId, this.operationId, request,
+       this.getViewManager().getCurrentViewId(), reqType);
+
+      console.log('TOMMessage: ', sm);
+
+      /*
+      sm.setReplyServer(replyServer);
 
        TOMulticast(sm);
        } else {
