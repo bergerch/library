@@ -2,6 +2,7 @@ import {Injectable} from '@angular/core';
 import {View} from "./View";
 import {ViewStorage} from "./ViewStorage.interface";
 import {TOMConfiguration} from "../config/TOMConfiguration";
+import {DefaultViewStorage} from "./DefaultViewStorage";
 
 
 @Injectable()
@@ -21,7 +22,7 @@ export class ViewController {
 
   public getCurrentView(): View {
     if (this.currentView == null) {
-      // this.currentView = getViewStore().readView();
+       this.currentView = this.getViewStore().readView();
     }
     return this.currentView;
   }
@@ -31,11 +32,8 @@ export class ViewController {
   }
 
   public getViewStore(): ViewStorage {
-    if (this.viewStore == null) {
-
-
-      // TODO this.viewStore = ;
-
+    if (!this.viewStore) {
+      this.viewStore = new DefaultViewStorage();
     }
     return this.viewStore;
   }

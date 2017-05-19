@@ -60,6 +60,7 @@ export abstract class TOMSender implements ReplyReceiver, Closeable {
 
   public getViewController() {
     console.log('getViewController() called');
+
     return this.viewController;
   }
 
