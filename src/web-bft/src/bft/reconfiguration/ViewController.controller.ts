@@ -11,7 +11,7 @@ export class ViewController {
   currentView: View = null;
   viewStore: ViewStorage;
 
-  constructor(procId: number, TOMConfiguration: TOMConfiguration) {
+  public constructor(procId: number, TOMConfiguration: TOMConfiguration) {
     // TODO Config.
   }
 

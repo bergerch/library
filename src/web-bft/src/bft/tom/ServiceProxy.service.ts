@@ -10,15 +10,17 @@ import {Extractor} from "bft/tom/util/Extractor.interface";
 import {ClientViewController} from "../reconfiguration/ClientViewController.controller";
 
 export enum TOMMessageType {
+
   ORDERED_REQUEST = 0,
   UNORDERED_REQUEST = 1,
   REPLY = 2,
   RECONFIG = 3,
   ASK_STATUS = 4,
   STATUS_REPLY = 5,
-  UNORDERED_HASHED_REQUEST = 6
+  UNORDERED_HASHED_REQUEST = 6,
 
 }
+
 
 @Injectable()
 export abstract class SystemMessage {
@@ -49,7 +51,7 @@ export class TOMMessage extends SystemMessage {
   operationId: number; // Sequence number defined by the client
   content: any; // Content of the message
 
-  constructor(sender: number, session: number, reqId: number, operationId: number, request: any, viewId: number,
+  public constructor(sender: number, session: number, reqId: number, operationId: number, request: any, viewId: number,
               requestType: TOMMessageType) {
     super(sender);
     this.session = session;
@@ -82,7 +84,7 @@ export class ServiceProxy extends TOMSender {
   extractor: Extractor;
 
 
-  constructor(TOMConfiguration: TOMConfiguration) {
+  public constructor(TOMConfiguration: TOMConfiguration) {
     super(TOMConfiguration);
 
     // FIXME Why is this still undefined?
@@ -118,7 +120,7 @@ export class ServiceProxy extends TOMSender {
    *
    * @param reply The reply delivered by the client side communication system
    */
-  replyReceived(reply: TOMMessage) {
+  public replyReceived(reply: TOMMessage) {
     // TODO
   }
 
@@ -181,10 +183,10 @@ export class ServiceProxy extends TOMSender {
   }
 
   private getRandomlyServerId(): number {
-    let numServers: number = super.getViewController().getCurrentViewProcesses().length;
+    let numServers: number = this.getViewController().getCurrentViewProcesses().length;
     // TODO Unsure if this will actually work properly?
     let pos = Math.round(Math.random() * numServers);
-    let id = super.getViewController().getCurrentViewProcesses()[pos];
+    let id = this.getViewController().getCurrentViewProcesses()[pos];
     console.log('getRandomlyServerId ', id);
     return id;
   }

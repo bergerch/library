@@ -44,7 +44,7 @@ export abstract class TOMSender implements ReplyReceiver, Closeable {
   protected viewController: ClientViewController;
 
 
-  constructor(private TOMConfiguration: TOMConfiguration) {
+  public constructor(private TOMConfiguration: TOMConfiguration) {
 
     this.viewController = new ClientViewController(this.me, this.TOMConfiguration);
 
@@ -59,6 +59,7 @@ export abstract class TOMSender implements ReplyReceiver, Closeable {
   }
 
   public getViewController() {
+    console.log('getViewController() called');
     return this.viewController;
   }
 
@@ -80,7 +81,7 @@ export abstract class TOMSender implements ReplyReceiver, Closeable {
     this.startsCS(processId);
   }
 
-  startsCS(clientId: number) {
+  public startsCS(clientId: number) {
 
   }
 

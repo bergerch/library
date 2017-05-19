@@ -4,13 +4,13 @@ import {TOMMessage} from "./ServiceProxy.service";
 
 @Injectable()
 export class HashResponseController {
+
   reply: TOMMessage;
   hashReplies: Uint8Array[];
   replyServerPos: number;
   countHashReplies: number;
 
-
-  constructor(replyServerPos: number, length: number) {
+  public constructor(replyServerPos: number, length: number) {
     this.replyServerPos = replyServerPos;
     this.hashReplies = [];
     this.reply = null;

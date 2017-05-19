@@ -9,7 +9,7 @@ export class View {
   processes: number[];
   addresses: Map<number, InternetAddress>;
 
-  constructor(id: number, processes: number[], f: number, addresses: InternetAddress[]) {
+  public constructor(id: number, processes: number[], f: number, addresses: InternetAddress[]) {
     this.id = id;
     this.f = f;
     this.processes = processes;
@@ -23,7 +23,7 @@ export class View {
 
   }
 
-  isMember(id: number): boolean {
+  public isMember(id: number): boolean {
     for (let i = 0; i < this.processes.length; i++) {
       if (this.processes[i] === id) {
         return true;
@@ -32,7 +32,7 @@ export class View {
     return false;
   }
 
-  getPos(id: number): number {
+  public getPos(id: number): number {
     for (let i = 0; i < this.processes.length; i++) {
       if (this.processes[i] == id) {
         return i;

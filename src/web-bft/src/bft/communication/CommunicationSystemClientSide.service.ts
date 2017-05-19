@@ -30,31 +30,31 @@ export class CommunicationSystemClientSide implements ICommunicationSystemClient
   ignatureLength: number;
   closed: boolean = false;
 
-  constructor() {
+  public constructor() {
     // TODO
   }
 
-  send(sign: boolean, targets: number[], sm: TOMMessage) {
+  public send(sign: boolean, targets: number[], sm: TOMMessage) {
 
   }
 
-  setReplyReceiver(trr: ReplyReceiver) {
+  public setReplyReceiver(trr: ReplyReceiver) {
 
   }
 
-  sign(sm: TOMMessage) {
+  public sign(sm: TOMMessage) {
 
   }
 
-  close() {
+  public close() {
 
   }
 
-  updateConnections() {
+  public updateConnections() {
 
   }
 
-  reconnect() {
+  public reconnect() {
 
   }
 
