@@ -8,60 +8,9 @@ import {TOMConfiguration} from "../config/TOMConfiguration";
 import {Comparator} from "./util/Comparator.interface";
 import {Extractor} from "bft/tom/util/Extractor.interface";
 import {ClientViewController} from "../reconfiguration/ClientViewController.controller";
+import {TOMMessageType} from "./messages/TOMMessageType";
+import {TOMMessage} from "./messages/TOMMessage";
 
-export enum TOMMessageType {
-
-  ORDERED_REQUEST = 0,
-  UNORDERED_REQUEST = 1,
-  REPLY = 2,
-  RECONFIG = 3,
-  ASK_STATUS = 4,
-  STATUS_REPLY = 5,
-  UNORDERED_HASHED_REQUEST = 6,
-
-}
-
-
-@Injectable()
-export abstract class SystemMessage {
-
-  sender: number; // ID of the process which sent the message
-  authenticated: boolean;
-  // set to TRUE if the message was received
-  // with a (valid) mac, FALSE if no mac was given
-  // note that if the message arrives with an
-  // invalid MAC, it won't be delivered
-
-  constructor(sender: number) {
-    this.sender = sender;
-  }
-
-  public setSender(sender: number) {
-    this.sender = sender;
-  }
-}
-
-@Injectable()
-export class TOMMessage extends SystemMessage {
-  viewId: number;
-  type: TOMMessageType; // request type: application or reconfiguration request
-  session: number; // Sequence number defined by the client
-  // There is a sequence number for ordered and another for unordered messages
-  sequence: number;
-  operationId: number; // Sequence number defined by the client
-  content: any; // Content of the message
-
-  public constructor(sender: number, session: number, reqId: number, operationId: number, request: any, viewId: number,
-                     requestType: TOMMessageType) {
-    super(sender);
-    this.session = session;
-    this.sequence = reqId;
-    this.operationId = operationId;
-    this.content = request;
-    this.viewId = viewId;
-    this.type = requestType;
-  }
-}
 
 @Injectable()
 export class ServiceProxy extends TOMSender {
@@ -88,7 +37,7 @@ export class ServiceProxy extends TOMSender {
     super(TOMConfiguration);
 
     // FIXME Why is this still undefined?
-    // this.replies = new TOMMessage[super.getViewManager().getCurrentView().getN()];
+    // this.replies = new TOMMessage.ts[super.getViewManager().getCurrentView().getN()];
 
     this.comparator = (this.comparator != null) ? this.comparator : {
       compare: function (o1: any, o2: any): number {
@@ -172,24 +121,19 @@ export class ServiceProxy extends TOMSender {
       let sm: TOMMessage = new TOMMessage(this.me, this.session, this.reqId, this.operationId, request,
         this.getViewManager().getCurrentViewId(), reqType);
 
-      console.log('TOMMessage: ', sm);
+      console.log('TOMMessage.ts: ', sm);
 
-      /*
-       sm.setReplyServer(replyServer);
+      sm.setReplyServer(this.replyServer);
 
-       TOMulticast(sm);
-       } else {
-       TOMulticast(request, reqId, operationId, reqType);
-       }*/
-
+      this.TOMulticast(sm);
     }
+
 
   }
 
   private getRandomlyServerId(): number {
     let numServers: number = this.getViewController().getCurrentViewProcesses().length;
     let pos = Math.floor(Math.random() * numServers);
-    console.log('pos ', pos);
     let id = this.getViewController().getCurrentViewProcesses()[pos];
     console.log('getRandomlyServerId ', id);
     return id;

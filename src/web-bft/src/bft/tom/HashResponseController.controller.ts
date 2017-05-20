@@ -1,5 +1,5 @@
 import {Injectable} from '@angular/core';
-import {TOMMessage} from "./ServiceProxy.service";
+import {TOMMessage} from "./messages/TOMMessage";
 
 
 @Injectable()

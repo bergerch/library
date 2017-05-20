@@ -1,4 +1,4 @@
-import {TOMMessage} from "../ServiceProxy.service";
+import {TOMMessage} from "../messages/TOMMessage";
 
 export interface Extractor {
 

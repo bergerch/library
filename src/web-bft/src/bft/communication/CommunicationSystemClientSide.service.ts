@@ -3,8 +3,8 @@
  */
 
 import {Injectable} from '@angular/core';
-import {TOMMessage} from "../tom/ServiceProxy.service";
 import {ReplyReceiver} from "bft/tom/TOMSender.service";
+import {TOMMessage} from "../tom/messages/TOMMessage";
 
 export interface ICommunicationSystemClientSide {
 
@@ -35,7 +35,7 @@ export class CommunicationSystemClientSide implements ICommunicationSystemClient
   }
 
   public send(sign: boolean, targets: number[], sm: TOMMessage) {
-
+    console.log('CommunicationSystem send() called ');
   }
 
   public setReplyReceiver(trr: ReplyReceiver) {

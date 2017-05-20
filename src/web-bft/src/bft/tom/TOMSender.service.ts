@@ -3,10 +3,11 @@
  */
 
 import {Injectable} from '@angular/core';
-import {TOMMessage, TOMMessageType} from "./ServiceProxy.service";
 import {CommunicationSystemClientSide} from "../communication/CommunicationSystemClientSide.service";
 import {ClientViewController} from "../reconfiguration/ClientViewController.controller";
 import {TOMConfiguration} from "../config/TOMConfiguration";
+import {TOMMessage} from "./messages/TOMMessage";
+import {TOMMessageType} from "./messages/TOMMessageType";
 
 
 export interface ReplyReceiver {
@@ -47,6 +48,8 @@ export abstract class TOMSender implements ReplyReceiver, Closeable {
   public constructor(private TOMConfiguration: TOMConfiguration) {
 
     this.viewController = new ClientViewController(this.me, this.TOMConfiguration);
+
+    this.cs = new CommunicationSystemClientSide();
 
   }
 
@@ -106,11 +109,12 @@ export abstract class TOMSender implements ReplyReceiver, Closeable {
 
 
   /**
-   * Multicast a TOMMessage to the group of replicas
+   * Multicast a TOMMessage.ts to the group of replicas
    *
    * @param sm Message to be multicast
    */
   public TOMulticast(sm: TOMMessage) {
+    console.log('Multicast TOM Message ', sm);
     this.cs.send(this.useSignatures, this.viewController.getCurrentView().processes, sm);
   }
 
