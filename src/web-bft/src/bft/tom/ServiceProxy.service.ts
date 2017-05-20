@@ -52,7 +52,7 @@ export class TOMMessage extends SystemMessage {
   content: any; // Content of the message
 
   public constructor(sender: number, session: number, reqId: number, operationId: number, request: any, viewId: number,
-              requestType: TOMMessageType) {
+                     requestType: TOMMessageType) {
     super(sender);
     this.session = session;
     this.sequence = reqId;
@@ -170,12 +170,12 @@ export class ServiceProxy extends TOMSender {
 
 
       let sm: TOMMessage = new TOMMessage(this.me, this.session, this.reqId, this.operationId, request,
-       this.getViewManager().getCurrentViewId(), reqType);
+        this.getViewManager().getCurrentViewId(), reqType);
 
       console.log('TOMMessage: ', sm);
 
       /*
-      sm.setReplyServer(replyServer);
+       sm.setReplyServer(replyServer);
 
        TOMulticast(sm);
        } else {
@@ -188,8 +188,8 @@ export class ServiceProxy extends TOMSender {
 
   private getRandomlyServerId(): number {
     let numServers: number = this.getViewController().getCurrentViewProcesses().length;
-    // TODO Unsure if this will actually work properly?
-    let pos = Math.round(Math.random() * numServers);
+    let pos = Math.floor(Math.random() * numServers);
+    console.log('pos ', pos);
     let id = this.getViewController().getCurrentViewProcesses()[pos];
     console.log('getRandomlyServerId ', id);
     return id;
