@@ -28,7 +28,7 @@ export class AppComponent implements OnInit {
   reply: any;
 
   constructor(websocketService: WebsocketService, private counterProxy: ServiceProxy) {
-    this.socket = websocketService.createWebsocket('wss://echo.websocket.org');
+    this.socket = websocketService.createWebsocket('ws://localhost:9000');
   }
 
   ngOnInit() {
