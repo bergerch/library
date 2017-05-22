@@ -3,7 +3,7 @@ import { BrowserModule } from '@angular/platform-browser';
 import { NgModule } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { HttpModule } from '@angular/http';
-import { WebsocketService } from './websocket.service';
+import { WebsocketService } from '../bft/communication/Websocket.service';
 
 
 import { AppComponent } from './app.component';

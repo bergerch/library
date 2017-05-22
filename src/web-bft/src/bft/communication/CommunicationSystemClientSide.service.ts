@@ -5,6 +5,7 @@
 import {Injectable} from '@angular/core';
 import {ReplyReceiver} from "bft/tom/TOMSender.service";
 import {TOMMessage} from "../tom/messages/TOMMessage";
+import {ClientViewController} from "../reconfiguration/ClientViewController.controller";
 
 export interface ICommunicationSystemClientSide {
 
@@ -30,7 +31,7 @@ export class CommunicationSystemClientSide implements ICommunicationSystemClient
   ignatureLength: number;
   closed: boolean = false;
 
-  public constructor() {
+  public constructor(clientId: number, viewController: ClientViewController) {
     // TODO
   }
 

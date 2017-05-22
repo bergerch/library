@@ -1,8 +1,8 @@
 import {Component, Input, Output, EventEmitter, OnInit} from '@angular/core';
-import {WebsocketService} from './websocket.service';
 import {Subject, Observable, Subscription} from 'rxjs/Rx';
 import {ServiceProxy} from "../bft/tom/ServiceProxy.service";
 import {TOMConfiguration} from "../bft/config/TOMConfiguration";
+import {WebsocketService} from '../bft/communication/Websocket.service';
 
 @Component({
   selector: 'app-root',

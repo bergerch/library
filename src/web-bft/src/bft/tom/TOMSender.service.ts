@@ -49,7 +49,9 @@ export abstract class TOMSender implements ReplyReceiver, Closeable {
 
     this.viewController = new ClientViewController(this.me, this.TOMConfiguration);
 
-    this.cs = new CommunicationSystemClientSide();
+    let clientID: number = Math.round(Math.random() * 100000);
+
+    this.cs = new CommunicationSystemClientSide(clientID, this.viewController);
 
   }
 
