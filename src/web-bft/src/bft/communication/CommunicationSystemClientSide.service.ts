@@ -6,6 +6,7 @@ import {Injectable} from '@angular/core';
 import {ReplyReceiver} from "bft/tom/TOMSender.service";
 import {TOMMessage} from "../tom/messages/TOMMessage";
 import {ClientViewController} from "../reconfiguration/ClientViewController.controller";
+import {ReplicaConnection} from "./ReplicaConnection";
 
 export interface ICommunicationSystemClientSide {
 
@@ -23,7 +24,7 @@ export class CommunicationSystemClientSide implements ICommunicationSystemClient
   clientId: number;
   trr: ReplyReceiver;
   clientViewController: Object;
-  sessionTable: Map<string, string> = new Map<string, string>();
+  sessionTable: Map<string, ReplicaConnection> = new Map<string, ReplicaConnection>();
   reentrantReadWriteLock: Object;
 
   //the signature engine used in the system
