@@ -3,6 +3,10 @@ import {Subject, Observer, Observable} from 'rxjs/Rx';
 @Injectable()
 export class WebsocketService {
 
+  public constructor() {
+
+  }
+
   public createWebsocket(address: string): Subject<MessageEvent> {
 
     let socket = new WebSocket(address);

@@ -7,8 +7,10 @@ import {ReplyReceiver} from "bft/tom/TOMSender.service";
 import {TOMMessage} from "../tom/messages/TOMMessage";
 import {ClientViewController} from "../reconfiguration/ClientViewController.controller";
 import {ReplicaConnection} from "./ReplicaConnection";
+import {WebsocketService} from "./Websocket.service";
+import {Subject} from "rxjs/Subject";
 
-export interface ICommunicationSystemClientSide {
+export interface ICommunicationSystem {
 
   send(sign: boolean, targets: number[], sm: TOMMessage);
   setReplyReceiver(trr: ReplyReceiver);
@@ -19,7 +21,7 @@ export interface ICommunicationSystemClientSide {
 }
 
 @Injectable()
-export class CommunicationSystemClientSide implements ICommunicationSystemClientSide {
+export class CommunicationSystem implements ICommunicationSystem {
 
   clientId: number;
   trr: ReplyReceiver;
@@ -29,15 +31,27 @@ export class CommunicationSystemClientSide implements ICommunicationSystemClient
 
   //the signature engine used in the system
   signatureEngine: Object;
-  ignatureLength: number;
+  signatureLength: number;
   closed: boolean = false;
 
+  protected socket: Subject<any>;
+  protected message: any;
+  protected websocketService: WebsocketService;
+
+
+
   public constructor(clientId: number, viewController: ClientViewController) {
-    // TODO
+    this.websocketService = new WebsocketService();
+    // For testing purpose
+    this.socket = this.websocketService.createWebsocket('ws://localhost:9000');
+    this.socket.subscribe((message) => {
+      this.message = message.data;
+    });
   }
 
   public send(sign: boolean, targets: number[], sm: TOMMessage) {
     console.log('CommunicationSystem send() called ');
+    this.socket.next(sm);
   }
 
   public setReplyReceiver(trr: ReplyReceiver) {

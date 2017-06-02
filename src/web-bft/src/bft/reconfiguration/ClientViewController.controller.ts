@@ -10,7 +10,7 @@ export class ClientViewController extends ViewController {
   }
 
 
-  public updateCurrentViewFromRepository(): void {
+  public updateCurrentView(): void {
     this.currentView = this.getViewStore().readView();
   }
 

@@ -3,11 +3,12 @@
  */
 
 import {Injectable} from '@angular/core';
-import {CommunicationSystemClientSide} from "../communication/CommunicationSystemClientSide.service";
+import {CommunicationSystem, ICommunicationSystem} from "../communication/CommunicationSystem.service";
 import {ClientViewController} from "../reconfiguration/ClientViewController.controller";
 import {TOMConfiguration} from "../config/TOMConfiguration";
 import {TOMMessage} from "./messages/TOMMessage";
 import {TOMMessageType} from "./messages/TOMMessageType";
+
 
 
 export interface ReplyReceiver {
@@ -39,19 +40,20 @@ export abstract class TOMSender implements ReplyReceiver, Closeable {
   session: number = 0; // session id
   sequence: number = 0; // sequence number
   unorderedMessageSequence: number = 0; // sequence number for readonly messages
-  cs: CommunicationSystemClientSide; // client side communication system
+  cs: ICommunicationSystem; // client side communication system
   useSignatures: boolean = false; // use MACs or signatures
   opCounter: number = 0; // Atomic counter
   protected viewController: ClientViewController;
+
 
 
   public constructor(private TOMConfiguration: TOMConfiguration) {
 
     this.viewController = new ClientViewController(this.me, this.TOMConfiguration);
 
-    let clientID: number = Math.round(Math.random() * 100000);
 
-    this.cs = new CommunicationSystemClientSide(clientID, this.viewController);
+    let clientID: number = Math.round(Math.random() * 100000);
+    this.cs = new CommunicationSystem(clientID, this.viewController);
 
   }
 

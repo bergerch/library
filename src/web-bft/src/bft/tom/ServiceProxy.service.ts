@@ -10,6 +10,7 @@ import {Extractor} from "bft/tom/util/Extractor.interface";
 import {ClientViewController} from "../reconfiguration/ClientViewController.controller";
 import {TOMMessageType} from "./messages/TOMMessageType";
 import {TOMMessage} from "./messages/TOMMessage";
+import {WebsocketService} from "../communication/Websocket.service";
 
 
 @Injectable()
