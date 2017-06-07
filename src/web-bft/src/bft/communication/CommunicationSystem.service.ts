@@ -9,6 +9,8 @@ import {ClientViewController} from "../reconfiguration/ClientViewController.cont
 import {ReplicaConnection} from "./ReplicaConnection";
 import {WebsocketService} from "./Websocket.service";
 import {Subject} from "rxjs/Subject";
+import {View} from "../reconfiguration/View";
+import {InternetAddress} from "../config/TOMConfiguration";
 
 export interface ICommunicationSystem {
 
@@ -35,23 +37,41 @@ export class CommunicationSystem implements ICommunicationSystem {
   closed: boolean = false;
 
   protected socket: Subject<any>;
-  protected message: any;
+  protected message: any[] = [];
   protected websocketService: WebsocketService;
-
 
 
   public constructor(clientId: number, viewController: ClientViewController) {
     this.websocketService = new WebsocketService();
-    // For testing purpose
-    this.socket = this.websocketService.createWebsocket('ws://localhost:9000');
-    this.socket.subscribe((message) => {
-      this.message = message.data;
+
+
+    console.log('Current View is: ');
+    viewController.getCurrentView().addresses.forEach((value: InternetAddress, key: number) => {
+      console.log('|->', value);
+
+      let address: string = 'ws://' + value.address + ':' + value.port;
+      let socket: Subject<any> = this.websocketService.createWebsocket(address);
+
+      // For testing purpose
+      socket.subscribe((message) => {
+        this.message[key] = message.data;
+      });
+
+      let connection: ReplicaConnection = new ReplicaConnection(socket, null, null, key);
+      this.sessionTable.set(address, connection);
     });
   }
 
   public send(sign: boolean, targets: number[], sm: TOMMessage) {
     console.log('CommunicationSystem send() called ');
-    this.socket.next(sm);
+
+    this.sessionTable.forEach((connection: ReplicaConnection, address: string) => {
+
+      connection.getSocket().next(sm);
+      console.log('Sending to ' + address);
+
+    });
+
   }
 
   public setReplyReceiver(trr: ReplyReceiver) {

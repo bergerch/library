@@ -28,11 +28,14 @@ export class TOMConfiguration {
     {server_id: 0, address: '127.0.0.1', port: 11000},
     {server_id: 1, address: '127.0.0.1', port: 11010},
     {server_id: 2, address: '127.0.0.1', port: 11020},
-    {server_id: 3, address: '127.0.0.1', port: 11030},
+    {server_id: 3, address: '127.0.0.1', port: 11030}
+    /*
+    ,
     {server_id: 4, address: '127.0.0.1', port: 11040},
     {server_id: 5, address: '127.0.0.1', port: 11050},
     {server_id: 6, address: '127.0.0.1', port: 11060},
     {server_id: 7, address: '127.0.0.1', port: 11070},
+    */
   ];
 
 

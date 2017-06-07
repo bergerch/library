@@ -8,15 +8,15 @@ import {Mac} from "./util/Mac";
 @Injectable()
 export class ReplicaConnection {
 
-  channel: Subject<MessageEvent>;
+  socket: Subject<any>;
   macSend: Mac;
   macReceive: Mac;
   replicaId: number;
 
 
-  public constructor(channel: Subject<MessageEvent>, macSend: Mac, macReceive: Mac, replicaId) {
+  public constructor(socket: Subject<any>, macSend: Mac, macReceive: Mac, replicaId) {
 
-    this.channel = channel;
+    this.socket = socket;
     this.macSend = macSend;
     this.macReceive = macReceive;
     this.replicaId = replicaId;
@@ -33,8 +33,8 @@ export class ReplicaConnection {
   }
 
 
-  public getChannel(): Subject<MessageEvent> {
-    return this.channel;
+  public getSocket(): Subject<any> {
+    return this.socket;
   }
 
   public getReplicaId(): number {
