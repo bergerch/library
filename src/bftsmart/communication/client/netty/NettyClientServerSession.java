@@ -28,6 +28,7 @@ import javax.crypto.Mac;
  * @author Paulo Sousa
  */
 public class NettyClientServerSession {
+
     private Channel channel;
     private Mac macSend;
     private Mac macReceive;

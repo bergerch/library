@@ -11,9 +11,12 @@ import io.netty.handler.logging.LoggingHandler;
 
 
 public class Server {
-    private static final int PORT = 9000;
+
 
     public static void main(String[] args) {
+
+        int port = Integer.parseInt(args[0]);
+
         // Configure the server.
         EventLoopGroup bossGroup = new NioEventLoopGroup(1);
         EventLoopGroup workerGroup = new NioEventLoopGroup();
@@ -25,7 +28,7 @@ public class Server {
                     .handler(new LoggingHandler(LogLevel.INFO))
                     .childHandler(new HttpInitializer());
 
-            Channel ch = b.bind(PORT).sync().channel();
+            Channel ch = b.bind(port).sync().channel();
 
             ch.closeFuture().sync();
         } catch (InterruptedException e) {
