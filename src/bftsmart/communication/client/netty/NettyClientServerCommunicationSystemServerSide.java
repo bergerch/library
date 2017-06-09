@@ -45,6 +45,8 @@ import java.util.logging.Level;
 
 import javax.crypto.Mac;
 
+import io.netty.handler.logging.LogLevel;
+import io.netty.handler.logging.LoggingHandler;
 import org.slf4j.LoggerFactory;
 
 import bftsmart.communication.client.CommunicationSystemServerSide;
@@ -67,7 +69,7 @@ public class NettyClientServerCommunicationSystemServerSide extends SimpleChanne
 	private ServerViewController controller;
         private boolean closed = false;
         private Channel mainChannel;
-        
+
         // This locked seems to introduce a bottleneck and seems useless, but I cannot recall why I added it
 	//private ReentrantLock sendLock = new ReentrantLock();
 	private NettyServerPipelineFactory serverPipelineFactory;
@@ -85,17 +87,20 @@ public class NettyClientServerCommunicationSystemServerSide extends SimpleChanne
 
 			serverPipelineFactory = new NettyServerPipelineFactory(this, sessionTable, macDummy.getMacLength(), controller, rl, TOMUtil.getSignatureSize(controller));
 
+			/** bergerch begin **/
+
+			/*
 			EventLoopGroup bossGroup = new NioEventLoopGroup();
-                        
+
                         //If the numbers of workers are not specified by the configuration file,
                         //the event group is created with the default number of threads, which
                         //should be twice the number of cores available.
                         int nWorkers = this.controller.getStaticConf().getNumNettyWorkers();
 			EventLoopGroup workerGroup = (nWorkers > 0 ? new NioEventLoopGroup(nWorkers) : new NioEventLoopGroup());
 
-			ServerBootstrap b = new ServerBootstrap(); 
+			ServerBootstrap b = new ServerBootstrap();
 			b.group(bossGroup, workerGroup)
-			.channel(NioServerSocketChannel.class) 
+			.channel(NioServerSocketChannel.class)
 			.childHandler(new ChannelInitializer<SocketChannel>() {
 				@Override
 				public void initChannel(SocketChannel ch) throws Exception {
@@ -108,7 +113,34 @@ public class NettyClientServerCommunicationSystemServerSide extends SimpleChanne
 			// Bind and start to accept incoming connections.
 			ChannelFuture f = b.bind(new InetSocketAddress(controller.getStaticConf().getHost(
 					controller.getStaticConf().getProcessId()),
-					controller.getStaticConf().getPort(controller.getStaticConf().getProcessId()))).sync(); 
+					controller.getStaticConf().getPort(controller.getStaticConf().getProcessId()))).sync();
+             */
+
+            int port = controller.getStaticConf().getPort(controller.getStaticConf().getProcessId());
+
+            // Configure the server.
+            EventLoopGroup bossGroup = new NioEventLoopGroup(1);
+            EventLoopGroup workerGroup = new NioEventLoopGroup();
+            try {
+                ServerBootstrap b = new ServerBootstrap();
+                b.option(ChannelOption.SO_BACKLOG, 1024);
+                b.group(bossGroup, workerGroup)
+                        .channel(NioServerSocketChannel.class)
+                        .handler(new LoggingHandler(LogLevel.INFO))
+                        .childHandler(new HttpInitializer());
+
+                Channel ch = b.bind(port).sync().channel();
+
+                ch.closeFuture().sync();
+                mainChannel = ch;
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            } finally {
+                bossGroup.shutdownGracefully();
+                workerGroup.shutdownGracefully();
+            }
+
+			/** bergerch end **/
 
 			System.out.println("-- ID = " + controller.getStaticConf().getProcessId());
 			System.out.println("-- N = " + controller.getCurrentViewN());
@@ -119,12 +151,14 @@ public class NettyClientServerCommunicationSystemServerSide extends SimpleChanne
 			if (controller.getStaticConf().getUseMACs() == 1) System.out.println("-- Using MACs");
 			if(controller.getStaticConf().getUseSignatures() == 1) System.out.println("-- Using Signatures");
 			//******* EDUARDO END **************//
-                        
-                        mainChannel = f.channel();
+
+			/** bergerch begin **/
+                        // mainChannel = f.channel();
+			/** bergerch end **/
 
 		} catch (NoSuchAlgorithmException ex) {
 			ex.printStackTrace();
-		} catch (InterruptedException ex) {
+		} catch (Exception ex) {
 			ex.printStackTrace();
 		}
 	}
@@ -135,37 +169,37 @@ public class NettyClientServerCommunicationSystemServerSide extends SimpleChanne
                 c.close();
                 c.eventLoop().shutdownGracefully();
         }
-        
+
         @Override
         public void shutdown() {
-            
+
             System.out.println("Shutting down Netty system");
-            
+
             this.closed = true;
 
             closeChannelAndEventLoop(mainChannel);
-                
+
             rl.readLock().lock();
             ArrayList<NettyClientServerSession> sessions = new ArrayList<>(sessionTable.values());
             rl.readLock().unlock();
             for (NettyClientServerSession ncss : sessions) {
-                
+
                 closeChannelAndEventLoop(ncss.getChannel());
 
             }
-            
+
             java.util.logging.Logger.getLogger(NettyClientServerCommunicationSystemServerSide.class.getName()).log(Level.INFO, "NettyClientServerCommunicationSystemServerSide is halting.");
 
         }
-        
+
 	@Override
 	public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause){
-		
+
                 if (this.closed) {
                     closeChannelAndEventLoop(ctx.channel());
                     return;
                 }
-            
+
                 if(cause instanceof ClosedChannelException)
 			System.out.println("Connection with client closed.");
 		else if(cause instanceof ConnectException) {
@@ -182,7 +216,7 @@ public class NettyClientServerCommunicationSystemServerSide extends SimpleChanne
                     closeChannelAndEventLoop(ctx.channel());
                     return;
                 }
-                            
+
                 //delivers message to TOMLayer
 		if (requestReceiver == null)
 			System.out.println("RECEIVER NULO!!!!!!!!!!!!");
@@ -191,7 +225,7 @@ public class NettyClientServerCommunicationSystemServerSide extends SimpleChanne
 
 	@Override
 	public void channelActive(ChannelHandlerContext ctx) {
-            
+
                 if (this.closed) {
                     closeChannelAndEventLoop(ctx.channel());
                     return;
@@ -202,12 +236,12 @@ public class NettyClientServerCommunicationSystemServerSide extends SimpleChanne
 
 	@Override
 	public void channelInactive(ChannelHandlerContext ctx) {
-            
+
                 if (this.closed) {
                     closeChannelAndEventLoop(ctx.channel());
                     return;
                 }
-                
+
 		rl.writeLock().lock();
 		try {
 			Set s = sessionTable.entrySet();
@@ -223,8 +257,8 @@ public class NettyClientServerCommunicationSystemServerSide extends SimpleChanne
 					break;
 				}
 			}
-			
-            
+
+
 
 		} finally {
 			rl.writeLock().unlock();
@@ -274,37 +308,37 @@ public class NettyClientServerCommunicationSystemServerSide extends SimpleChanne
 		for (int i = 0; i < targets.length; i++) {
 			rl.readLock().lock();
 			//sendLock.lock();
-			try {       
+			try {
 				NettyClientServerSession ncss = (NettyClientServerSession) sessionTable.get(targets[i]);
 				if (ncss != null) {
 					Channel session = ncss.getChannel();
 					sm.destination = targets[i];
 					//send message
 					session.writeAndFlush(sm); // This used to invoke "await". Removed to avoid blockage and race condition.
-                                
+
                                 ///////TODO: replace this patch for a proper client preamble
                                 } else if (sm.getSequence() >= 0 && sm.getSequence() <= 5) {
-                                    
+
                                         final int id = targets[i];
                                         final TOMMessage msg = sm;
-                                        
+
                                         Thread t = new Thread() {
-                                                                                        
+
                                             public void run() {
-                                                
+
                                                 System.out.println("Received request from " + id + " before establishing Netty connection. Re-trying until connection is established");
 
                                                 NettyClientServerSession ncss = null;
                                                 while (ncss == null) {
 
                                                     rl.readLock().lock();
-                                                    
+
                                                     try {
                                                         Thread.sleep(1000);
                                                     } catch (InterruptedException ex) {
                                                         java.util.logging.Logger.getLogger(NettyClientServerCommunicationSystemServerSide.class.getName()).log(Level.SEVERE, null, ex);
                                                     }
-                                                    
+
                                                     ncss = (NettyClientServerSession) sessionTable.get(id);
                                                     if (ncss != null) {
                                                             Channel session = ncss.getChannel();
@@ -314,16 +348,16 @@ public class NettyClientServerCommunicationSystemServerSide extends SimpleChanne
                                                     }
 
                                                     rl.readLock().unlock();
-                                                    
+
                                                 }
-                                                 
+
                                                 System.out.println("Connection with " + id + " established!");
 
-                                                
+
                                             }
-                                            
+
                                         };
-                                        
+
                                         t.start();
                                         ///////////////////////////////////////////
 				} else {
