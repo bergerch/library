@@ -1,5 +1,6 @@
 package bftsmart.communication.client.netty;
 
+import bftsmart.communication.client.CommunicationSystemServerSide;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.handler.codec.http.FullHttpMessage;
@@ -14,6 +15,15 @@ import java.net.URISyntaxException;
 public class HttpServerHandler extends ChannelInboundHandlerAdapter {
 
     WebSocketServerHandshaker handshaker;
+    CommunicationSystemServerSide communicationSystemServer;
+
+
+    public HttpServerHandler(CommunicationSystemServerSide communicationSystemServer) {
+
+        super();
+        this.communicationSystemServer = communicationSystemServer;
+    }
+
 
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
@@ -39,7 +49,7 @@ public class HttpServerHandler extends ChannelInboundHandlerAdapter {
                     headers.get("Upgrade").equalsIgnoreCase("WebSocket")) {
 
                 //Adding new handler to the existing pipeline to handle WebSocket Messages
-                ctx.pipeline().replace(this, "websocketHandler", new WebSocketHandler());
+                ctx.pipeline().replace(this, "websocketHandler", new WebSocketHandler(communicationSystemServer));
 
                 System.out.println("WebSocketHandler added to the pipeline");
 

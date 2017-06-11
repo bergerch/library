@@ -114,6 +114,7 @@ public class NettyClientServerCommunicationSystemServerSide extends SimpleChanne
 			ChannelFuture f = b.bind(new InetSocketAddress(controller.getStaticConf().getHost(
 					controller.getStaticConf().getProcessId()),
 					controller.getStaticConf().getPort(controller.getStaticConf().getProcessId()))).sync();
+
              */
 
             int port = controller.getStaticConf().getPort(controller.getStaticConf().getProcessId());
@@ -121,24 +122,36 @@ public class NettyClientServerCommunicationSystemServerSide extends SimpleChanne
             // Configure the server.
             EventLoopGroup bossGroup = new NioEventLoopGroup(1);
             EventLoopGroup workerGroup = new NioEventLoopGroup();
-            try {
-                ServerBootstrap b = new ServerBootstrap();
-                b.option(ChannelOption.SO_BACKLOG, 1024);
-                b.group(bossGroup, workerGroup)
-                        .channel(NioServerSocketChannel.class)
-                        .handler(new LoggingHandler(LogLevel.INFO))
-                        .childHandler(new HttpInitializer());
 
-                Channel ch = b.bind(port).sync().channel();
+			ServerBootstrap b = new ServerBootstrap();
+			b.option(ChannelOption.SO_BACKLOG, 1024);
+			b.group(bossGroup, workerGroup)
+					.channel(NioServerSocketChannel.class)
+					.handler(new LoggingHandler(LogLevel.INFO))
+					.childHandler(new HttpInitializer(this))
+			.childOption(ChannelOption.SO_KEEPALIVE, true).childOption(ChannelOption.TCP_NODELAY, true);
 
-                ch.closeFuture().sync();
-                mainChannel = ch;
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            } finally {
-                bossGroup.shutdownGracefully();
-                workerGroup.shutdownGracefully();
-            }
+
+			//ChannelFuture f =  b.bind(port).sync();
+			//Channel ch = b.bind(port).sync().channel();
+
+			ChannelFuture f = b.bind(new InetSocketAddress(controller.getStaticConf().getHost(
+					controller.getStaticConf().getProcessId()),
+					controller.getStaticConf().getPort(controller.getStaticConf().getProcessId()))).sync();
+
+                /*
+				Thread thread = new Thread(){
+					public void run(){
+						try{
+							ch.closeFuture().sync();
+						} catch (InterruptedException e) {
+							e.printStackTrace();
+						}
+					}
+				};
+				thread.start();
+				*/
+
 
 			/** bergerch end **/
 
@@ -153,7 +166,7 @@ public class NettyClientServerCommunicationSystemServerSide extends SimpleChanne
 			//******* EDUARDO END **************//
 
 			/** bergerch begin **/
-                        // mainChannel = f.channel();
+                         mainChannel = f.channel();
 			/** bergerch end **/
 
 		} catch (NoSuchAlgorithmException ex) {
@@ -370,4 +383,31 @@ public class NettyClientServerCommunicationSystemServerSide extends SimpleChanne
 		}
 	}
 
+	public RequestReceiver getRequestReceiver() {
+		return requestReceiver;
+	}
+
+	public HashMap getSessionTable() {
+		return sessionTable;
+	}
+
+	public ReentrantReadWriteLock getRl() {
+		return rl;
+	}
+
+	public ServerViewController getController() {
+		return controller;
+	}
+
+	public boolean isClosed() {
+		return closed;
+	}
+
+	public Channel getMainChannel() {
+		return mainChannel;
+	}
+
+	public NettyServerPipelineFactory getServerPipelineFactory() {
+		return serverPipelineFactory;
+	}
 }
