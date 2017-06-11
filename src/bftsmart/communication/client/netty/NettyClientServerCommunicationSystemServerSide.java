@@ -89,15 +89,18 @@ public class NettyClientServerCommunicationSystemServerSide extends SimpleChanne
 
 			/** bergerch begin **/
 
-			/*
-			EventLoopGroup bossGroup = new NioEventLoopGroup();
+            // Configure the server.
 
-                        //If the numbers of workers are not specified by the configuration file,
-                        //the event group is created with the default number of threads, which
-                        //should be twice the number of cores available.
-                        int nWorkers = this.controller.getStaticConf().getNumNettyWorkers();
+            EventLoopGroup bossGroup = new NioEventLoopGroup();
+
+			//If the numbers of workers are not specified by the configuration file,
+			//the event group is created with the default number of threads, which
+			//should be twice the number of cores available.
+			int nWorkers = this.controller.getStaticConf().getNumNettyWorkers();
 			EventLoopGroup workerGroup = (nWorkers > 0 ? new NioEventLoopGroup(nWorkers) : new NioEventLoopGroup());
 
+
+			/* Old Configuration
 			ServerBootstrap b = new ServerBootstrap();
 			b.group(bossGroup, workerGroup)
 			.channel(NioServerSocketChannel.class)
@@ -109,19 +112,8 @@ public class NettyClientServerCommunicationSystemServerSide extends SimpleChanne
 					ch.pipeline().addLast(serverPipelineFactory.getHandler());
 				}
 			})	.childOption(ChannelOption.SO_KEEPALIVE, true).childOption(ChannelOption.TCP_NODELAY, true);
+            */
 
-			// Bind and start to accept incoming connections.
-			ChannelFuture f = b.bind(new InetSocketAddress(controller.getStaticConf().getHost(
-					controller.getStaticConf().getProcessId()),
-					controller.getStaticConf().getPort(controller.getStaticConf().getProcessId()))).sync();
-
-             */
-
-            int port = controller.getStaticConf().getPort(controller.getStaticConf().getProcessId());
-
-            // Configure the server.
-            EventLoopGroup bossGroup = new NioEventLoopGroup(1);
-            EventLoopGroup workerGroup = new NioEventLoopGroup();
 
 			ServerBootstrap b = new ServerBootstrap();
 			b.option(ChannelOption.SO_BACKLOG, 1024);
@@ -131,26 +123,10 @@ public class NettyClientServerCommunicationSystemServerSide extends SimpleChanne
 					.childHandler(new HttpInitializer(this))
 			.childOption(ChannelOption.SO_KEEPALIVE, true).childOption(ChannelOption.TCP_NODELAY, true);
 
-
-			//ChannelFuture f =  b.bind(port).sync();
-			//Channel ch = b.bind(port).sync().channel();
-
+			// Bind and start to accept incoming connections.
 			ChannelFuture f = b.bind(new InetSocketAddress(controller.getStaticConf().getHost(
 					controller.getStaticConf().getProcessId()),
 					controller.getStaticConf().getPort(controller.getStaticConf().getProcessId()))).sync();
-
-                /*
-				Thread thread = new Thread(){
-					public void run(){
-						try{
-							ch.closeFuture().sync();
-						} catch (InterruptedException e) {
-							e.printStackTrace();
-						}
-					}
-				};
-				thread.start();
-				*/
 
 
 			/** bergerch end **/
@@ -165,9 +141,9 @@ public class NettyClientServerCommunicationSystemServerSide extends SimpleChanne
 			if(controller.getStaticConf().getUseSignatures() == 1) System.out.println("-- Using Signatures");
 			//******* EDUARDO END **************//
 
-			/** bergerch begin **/
-                         mainChannel = f.channel();
-			/** bergerch end **/
+
+            mainChannel = f.channel();
+
 
 		} catch (NoSuchAlgorithmException ex) {
 			ex.printStackTrace();
