@@ -67,8 +67,13 @@ public class NettyClientServerCommunicationSystemServerSide extends SimpleChanne
 	private HashMap sessionTable;
 	private ReentrantReadWriteLock rl;
 	private ServerViewController controller;
-        private boolean closed = false;
-        private Channel mainChannel;
+    private boolean closed = false;
+
+
+	private Channel mainChannel;
+
+	private WebSocketHandler webSocketHandler;
+	private HashMap<Integer, WebClientServerSession> webClientConnections;
 
         // This locked seems to introduce a bottleneck and seems useless, but I cannot recall why I added it
 	//private ReentrantLock sendLock = new ReentrantLock();
@@ -260,8 +265,33 @@ public class NettyClientServerCommunicationSystemServerSide extends SimpleChanne
 		this.requestReceiver = tl;
 	}
 
+
+
 	@Override
 	public void send(int[] targets, TOMMessage sm, boolean serializeClassHeaders) {
+
+
+		ArrayList<WebClientServerSession> webClientReceivers = new ArrayList<>();
+		ArrayList<Integer> targetsNetty = new ArrayList<>();
+
+		for (int i = 0; i< targets.length; i++) {
+			if (webClientConnections.containsKey(new Integer(targets[i]))) {
+				webClientReceivers.add(webClientConnections.get(new Integer(targets[i])));
+			} else {
+				targetsNetty.add(new Integer(targets[i]));
+			}
+		}
+		if (!webClientReceivers.isEmpty()) {
+			webSocketHandler.send(webClientReceivers, sm);
+		}
+
+
+		targets = new int[targetsNetty.size()];
+		int k = 0;
+		for (Integer i: targetsNetty) {
+			targets[k] = i.intValue();
+			k++;
+		}
 
 		//serialize message
 		DataOutputStream dos = null;
@@ -385,5 +415,18 @@ public class NettyClientServerCommunicationSystemServerSide extends SimpleChanne
 
 	public NettyServerPipelineFactory getServerPipelineFactory() {
 		return serverPipelineFactory;
+	}
+
+	public void setWebSocketHandler(WebSocketHandler webSocketHandler) {
+		this.webSocketHandler = webSocketHandler;
+	}
+
+	public HashMap<Integer, WebClientServerSession> getWebClientConnections() {
+		return webClientConnections;
+	}
+
+	public void setWebClientConnections(HashMap<Integer, WebClientServerSession> webClientConnections) {
+
+		this.webClientConnections = webClientConnections;
 	}
 }

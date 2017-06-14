@@ -14,6 +14,7 @@ import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.WebSocketFrame;
 
 
+import java.util.ArrayList;
 import java.util.Iterator;
 
 import org.json.simple.JSONArray;
@@ -28,8 +29,17 @@ public class WebSocketHandler extends ChannelInboundHandlerAdapter {
     public WebSocketHandler(CommunicationSystemServerSide communicationSystemServer) {
         super();
         this.communicationSystemServer = communicationSystemServer;
+        ((NettyClientServerCommunicationSystemServerSide) communicationSystemServer).setWebSocketHandler(this);
     }
 
+
+    public void send(ArrayList<WebClientServerSession> webClientReceivers, TOMMessage sm) {
+
+        for (WebClientServerSession wcss: webClientReceivers) {
+
+        }
+
+    }
 
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
@@ -45,7 +55,8 @@ public class WebSocketHandler extends ChannelInboundHandlerAdapter {
 
                 String jsonMsg = ((TextWebSocketFrame) msg).text();
 
-                ctx.channel().write(new TextWebSocketFrame("Message recieved : " + jsonMsg));
+                // ctx.channel().write(new TextWebSocketFrame("Message recieved : " + jsonMsg));
+
                 System.out.println(jsonMsg);
 
 
