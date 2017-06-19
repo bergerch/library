@@ -14,7 +14,9 @@ import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.WebSocketFrame;
 
 
+import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Iterator;
 
 import org.json.simple.JSONArray;
@@ -35,8 +37,35 @@ public class WebSocketHandler extends ChannelInboundHandlerAdapter {
 
     public void send(ArrayList<WebClientServerSession> webClientReceivers, TOMMessage sm) {
 
-        for (WebClientServerSession wcss: webClientReceivers) {
+        int sender = sm.getSender();
+        int session = sm.getSession();
+        int sequence = sm.getSequence();
+        int operationId = sm.getOperationId();
+        int view = sm.getViewID();
+        int type = sm.getReqType().toInt();
+        byte[] contentBytes = sm.getContent();
+        String content = "";
+        try {
+            content = new String(contentBytes, "UTF-8");
+        } catch (UnsupportedEncodingException e) {
+            e.printStackTrace();
+        }
 
+        JSONObject msg = new JSONObject();
+        msg.put("sender", new Integer(sender));
+        msg.put("session", new Integer(session));
+        msg.put("sequence", new Integer(sequence));
+        msg.put("operationId", new Integer(operationId));
+        msg.put("view", new Integer(view));
+        msg.put("type", new Integer(type));
+        msg.put("content", content);
+
+        String jsonMsg = msg.toJSONString();
+
+        for (WebClientServerSession wcss: webClientReceivers) {
+            System.out.println("Sending JSON to client ");
+            System.out.println(jsonMsg);
+            wcss.getCtx().write(jsonMsg);
         }
 
     }
@@ -51,6 +80,7 @@ public class WebSocketHandler extends ChannelInboundHandlerAdapter {
                 System.out.println("BinaryWebSocketFrame Received : ");
                 System.out.println(((BinaryWebSocketFrame) msg).content());
             } else if (msg instanceof TextWebSocketFrame) {
+
                 System.out.println("TextWebSocketFrame Received : ");
 
                 String jsonMsg = ((TextWebSocketFrame) msg).text();
@@ -69,6 +99,18 @@ public class WebSocketHandler extends ChannelInboundHandlerAdapter {
                     JSONObject jsonObject = (JSONObject) obj;
 
                     int sender = ((Long) jsonObject.get("sender")).intValue();
+
+                    WebClientServerSession wcss = new WebClientServerSession(ctx,
+                            ((NettyClientServerCommunicationSystemServerSide) communicationSystemServer).getController().
+                                    getStaticConf().getProcessId());
+
+                    HashMap<Integer, WebClientServerSession> webClients =
+                            ((NettyClientServerCommunicationSystemServerSide) communicationSystemServer).getWebClientConnections();
+
+                    if (!webClients.containsValue(wcss)) {
+                        webClients.put(new Integer(sender), wcss);
+                    }
+
                     int session = ((Long) jsonObject.get("session")).intValue();
                     int sequence = ((Long) jsonObject.get("sequence")).intValue();
                     int operationId = ((Long) jsonObject.get("operationId")).intValue();

@@ -74,7 +74,6 @@ public class NettyClientServerCommunicationSystemServerSide extends SimpleChanne
 
 	private WebSocketHandler webSocketHandler;
 	private HashMap<Integer, WebClientServerSession> webClientConnections;
-
         // This locked seems to introduce a bottleneck and seems useless, but I cannot recall why I added it
 	//private ReentrantLock sendLock = new ReentrantLock();
 	private NettyServerPipelineFactory serverPipelineFactory;
@@ -85,6 +84,7 @@ public class NettyClientServerCommunicationSystemServerSide extends SimpleChanne
 
 			this.controller = controller;
 			sessionTable = new HashMap();
+			webClientConnections = new HashMap<>();
 			rl = new ReentrantReadWriteLock();
 
 			//Configure the server.
@@ -281,10 +281,14 @@ public class NettyClientServerCommunicationSystemServerSide extends SimpleChanne
 				targetsNetty.add(new Integer(targets[i]));
 			}
 		}
+
 		if (!webClientReceivers.isEmpty()) {
 			webSocketHandler.send(webClientReceivers, sm);
 		}
 
+		if (targetsNetty.size() == 0) {
+			return;
+		}
 
 		targets = new int[targetsNetty.size()];
 		int k = 0;
@@ -292,6 +296,9 @@ public class NettyClientServerCommunicationSystemServerSide extends SimpleChanne
 			targets[k] = i.intValue();
 			k++;
 		}
+
+		// FixMe For testing purpose
+		/*
 
 		//serialize message
 		DataOutputStream dos = null;
@@ -318,9 +325,9 @@ public class NettyClientServerCommunicationSystemServerSide extends SimpleChanne
 		sm.signed = false;
 		//produce signature if necessary (never in the current version)
 		if (sm.signed) {
-			//******* EDUARDO BEGIN **************//
+			//******* EDUARDO BEGIN *************
 			byte[] data2 = TOMUtil.signMessage(controller.getStaticConf().getRSAPrivateKey(), data);
-			//******* EDUARDO END **************//
+			//******* EDUARDO END **************
 			sm.serializedMessageSignature = data2;
 		}
 
@@ -387,6 +394,8 @@ public class NettyClientServerCommunicationSystemServerSide extends SimpleChanne
 				rl.readLock().unlock();
 			}
 		}
+		*/
+
 	}
 
 	public RequestReceiver getRequestReceiver() {
