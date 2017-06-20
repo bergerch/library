@@ -14,7 +14,11 @@ import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.WebSocketFrame;
 
 
+import java.io.ByteArrayInputStream;
+import java.io.DataInputStream;
+import java.io.IOException;
 import java.io.UnsupportedEncodingException;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -43,11 +47,16 @@ public class WebSocketHandler extends ChannelInboundHandlerAdapter {
         int operationId = sm.getOperationId();
         int view = sm.getViewID();
         int type = sm.getReqType().toInt();
-        byte[] contentBytes = sm.getContent();
         String content = "";
+
+
+        // FIXME do not assume int
+        byte[] reply = sm.getContent();
         try {
-            content = new String(contentBytes, "UTF-8");
-        } catch (UnsupportedEncodingException e) {
+            int newValue = new DataInputStream(new ByteArrayInputStream(reply)).readInt();
+            content = content + newValue;
+            System.out.println(newValue);
+        } catch (IOException e) {
             e.printStackTrace();
         }
 
@@ -116,16 +125,30 @@ public class WebSocketHandler extends ChannelInboundHandlerAdapter {
                     int operationId = ((Long) jsonObject.get("operationId")).intValue();
                     int view = ((Long) jsonObject.get("viewId")).intValue();
                     TOMMessageType type = TOMMessageType.fromInt(((Long) jsonObject.get("type")).intValue());
-                    JSONObject contentObject = (JSONObject) jsonObject.get("content");
-                    byte[] content = contentObject.toJSONString().getBytes("utf-8");
+                    byte[] content = new byte[1];
 
+                    try {
 
-                    TOMMessage sm = new TOMMessage(sender, session, sequence, operationId, content, view, type);
+                        JSONObject contentObject = (JSONObject) jsonObject.get("content");
+                        content = contentObject.toJSONString().getBytes("utf-8");
 
-                    if (((NettyClientServerCommunicationSystemServerSide) communicationSystemServer)
-                            .getRequestReceiver() != null) {
-                        ((NettyClientServerCommunicationSystemServerSide) communicationSystemServer)
-                                .getRequestReceiver().requestReceived(sm);
+                    } catch(ClassCastException e) {
+
+                        ByteBuffer b = ByteBuffer.allocate(4);
+                        int contentInt = ((Long) jsonObject.get("content")).intValue();
+                        b.putInt(contentInt);
+                        content = b.array();
+
+                    } finally {
+
+                        TOMMessage sm = new TOMMessage(sender, session, sequence, operationId, content, view, type);
+
+                        if (((NettyClientServerCommunicationSystemServerSide) communicationSystemServer)
+                                .getRequestReceiver() != null) {
+                            ((NettyClientServerCommunicationSystemServerSide) communicationSystemServer)
+                                    .getRequestReceiver().requestReceived(sm);
+                        }
+
                     }
 
 
