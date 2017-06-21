@@ -21,7 +21,7 @@ import java.util.Date;
 public class Logger {
 
     //public static long startInstant = System.currentTimeMillis();
-    public static boolean debug = false;
+    public static boolean debug = true;
 
     public static void println(String msg) {
         if (debug) {

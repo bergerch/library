@@ -118,7 +118,6 @@ export class ServiceProxy extends TOMSender {
         viewController.getCurrentViewProcesses().length);
       console.log('hashResponseController: ', hashResponseController);
 
-
       let sm: TOMMessage = new TOMMessage(this.me, this.session, this.reqId, this.operationId, request,
         this.getViewManager().getCurrentViewId(), reqType);
 
@@ -127,6 +126,11 @@ export class ServiceProxy extends TOMSender {
       sm.setReplyServer(this.replyServer);
 
       this.TOMulticast(sm);
+    } else {
+
+      console.log(reqType);
+       this.TOMulticastData(request, this.reqId, reqType, this.operationId,);
+
     }
 
 

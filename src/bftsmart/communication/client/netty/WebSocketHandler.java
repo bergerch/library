@@ -135,13 +135,14 @@ public class WebSocketHandler extends ChannelInboundHandlerAdapter {
                     } catch(ClassCastException e) {
 
                         ByteBuffer b = ByteBuffer.allocate(4);
-                        int contentInt = ((Long) jsonObject.get("content")).intValue();
+                        int contentInt = Integer.parseInt(jsonObject.get("content").toString());
                         b.putInt(contentInt);
                         content = b.array();
 
                     } finally {
 
                         TOMMessage sm = new TOMMessage(sender, session, sequence, operationId, content, view, type);
+                        sm.serializedMessage = content;
 
                         if (((NettyClientServerCommunicationSystemServerSide) communicationSystemServer)
                                 .getRequestReceiver() != null) {

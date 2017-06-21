@@ -81,7 +81,7 @@ public final class CounterServer extends DefaultRecoverable  {
             int increment = new DataInputStream(new ByteArrayInputStream(command)).readInt();
             //System.out.println("read-only request: "+(msgCtx.getConsensusId() == -1));
             counter += increment;
-            
+            System.out.println("Counter " + counter);
             if (msgCtx != null) {
                 if (msgCtx.getConsensusId() == -1) {
                     System.out.println("(" + iterations + ") Counter was incremented: " + counter);

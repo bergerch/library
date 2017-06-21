@@ -45,10 +45,9 @@ export class AppComponent implements OnInit {
       this.countChange.emit(this.counterValue);
       this.sentMessage = 'Websocket Message ' + this.counterValue;
       console.log('application called counterProxy.invokeOrdered() with ', {
-        counter: this.counterValue,
-        iterations: this.iterations
+        counter: this.counterValue
       });
-      this.reply = this.counterProxy.invokeUnorderedHashed(this.counterValue);
+      this.reply = this.counterProxy.invokeOrdered(this.counterValue);
     });
 
 

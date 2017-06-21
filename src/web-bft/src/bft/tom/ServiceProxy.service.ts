@@ -126,6 +126,11 @@ export class ServiceProxy extends TOMSender {
       sm.setReplyServer(this.replyServer);
 
       this.TOMulticast(sm);
+    } else {
+
+      console.log(reqType);
+       this.TOMulticastData(request, this.reqId, reqType, this.operationId,);
+
     }
 
 

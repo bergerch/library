@@ -47,6 +47,10 @@ public final class ForwardedMessage extends SystemMessage {
 
     @Override
     public void writeExternal(ObjectOutput out) throws IOException {
+       if (out == null) {
+
+       }
+
         super.writeExternal(out);
 
         out.writeInt(request.serializedMessage.length);

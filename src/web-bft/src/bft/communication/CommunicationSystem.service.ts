@@ -63,7 +63,7 @@ export class CommunicationSystem implements ICommunicationSystem {
   }
 
   public send(sign: boolean, targets: number[], sm: TOMMessage) {
-    console.log('CommunicationSystem send() called ');
+    console.log('CommunicationSystem send() called ', sm);
 
     this.sessionTable.forEach((connection: ReplicaConnection, address: string) => {
 
