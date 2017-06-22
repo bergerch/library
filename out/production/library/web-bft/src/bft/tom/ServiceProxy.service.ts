@@ -72,6 +72,7 @@ export class ServiceProxy extends TOMSender {
    */
   public replyReceived(reply: TOMMessage) {
     // TODO
+    console.log('REPLY ', reply);
   }
 
   public invokeOrdered(request): any {

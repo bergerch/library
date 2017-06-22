@@ -53,8 +53,9 @@ export class CommunicationSystem implements ICommunicationSystem {
       let socket: Subject<any> = this.websocketService.createWebsocket(address);
 
       // For testing purpose
-      socket.subscribe((message) => {
-        this.message[key] = message.data;
+      socket.subscribe((data) => {
+        this.message[key] = data;
+        console.log('Received: ', data);
       });
 
       let connection: ReplicaConnection = new ReplicaConnection(socket, null, null, key);

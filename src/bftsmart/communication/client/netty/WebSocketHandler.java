@@ -74,7 +74,7 @@ public class WebSocketHandler extends ChannelInboundHandlerAdapter {
         for (WebClientServerSession wcss: webClientReceivers) {
             System.out.println("Sending JSON to client ");
             System.out.println(jsonMsg);
-            wcss.getCtx().write(jsonMsg);
+            wcss.getCtx().writeAndFlush(new TextWebSocketFrame(jsonMsg));
         }
 
     }
