@@ -142,7 +142,7 @@ public class WebSocketHandler extends ChannelInboundHandlerAdapter {
                     } finally {
 
                         TOMMessage sm = new TOMMessage(sender, session, sequence, operationId, content, view, type);
-                        sm.serializedMessage = content;
+                        sm.serializedMessage = TOMMessage.messageToBytes(sm);
 
                         if (((NettyClientServerCommunicationSystemServerSide) communicationSystemServer)
                                 .getRequestReceiver() != null) {
