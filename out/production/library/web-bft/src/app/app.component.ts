@@ -3,6 +3,8 @@ import {Subject, Observable, Subscription} from 'rxjs/Rx';
 import {ServiceProxy} from "../bft/tom/ServiceProxy.service";
 import {TOMConfiguration} from "../bft/config/TOMConfiguration";
 import {WebsocketService} from '../bft/communication/Websocket.service';
+import {TOMMessage} from "../bft/tom/messages/TOMMessage";
+import {ReplyListener} from "../bft/communication/ReplyListener.interface";
 
 @Component({
   selector: 'app-root',
@@ -10,7 +12,7 @@ import {WebsocketService} from '../bft/communication/Websocket.service';
   styleUrls: ['./app.component.css'],
   providers: [ServiceProxy, TOMConfiguration]
 })
-export class AppComponent implements OnInit {
+export class AppComponent implements OnInit, ReplyListener {
   @Input() count = 0;
   @Output() countChange = new EventEmitter<number>();
 
@@ -34,20 +36,28 @@ export class AppComponent implements OnInit {
 
   }
 
+  replyReceived(sm: TOMMessage) {
+    this.count = sm.content;
+    this.message = "" + sm.content;
+    // console.log(sm);
+  }
+
   launchCounter() {
+
 
     // Counter already initialized
     if (this.counterSubscription) {
       this.counterSubscription.unsubscribe();
     }
-    this.counter = Observable.interval(2000);
+    this.counter = Observable.interval(100);
     this.counterSubscription = this.counter.subscribe((num) => {
       this.countChange.emit(this.counterValue);
-      this.sentMessage = 'Websocket Message ' + this.counterValue;
-      console.log('application called counterProxy.invokeOrdered() with ', {
-        counter: this.counterValue
-      });
-      this.reply = this.counterProxy.invokeOrdered(this.counterValue);
+      this.sentMessage = "" + this.counterValue;
+      // console.log('application called counterProxy.invokeOrdered() with ', {
+      //  counter: this.counterValue
+      // });
+      this.reply = this.counterProxy.invokeOrdered(this.counterValue, this);
+      // console.log(this.message);
     });
 
 

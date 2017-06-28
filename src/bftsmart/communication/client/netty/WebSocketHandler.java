@@ -55,7 +55,7 @@ public class WebSocketHandler extends ChannelInboundHandlerAdapter {
         try {
             int newValue = new DataInputStream(new ByteArrayInputStream(reply)).readInt();
             content = content + newValue;
-            System.out.println(newValue);
+            //System.outprintln(newValue);
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -72,8 +72,7 @@ public class WebSocketHandler extends ChannelInboundHandlerAdapter {
         String jsonMsg = msg.toJSONString();
 
         for (WebClientServerSession wcss: webClientReceivers) {
-            System.out.println("Sending JSON to client ");
-            System.out.println(jsonMsg);
+            // System.out.println(" ---> Sending JSON to client " + jsonMsg);
             wcss.getCtx().writeAndFlush(new TextWebSocketFrame(jsonMsg));
         }
 
@@ -83,20 +82,16 @@ public class WebSocketHandler extends ChannelInboundHandlerAdapter {
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
 
         if (msg instanceof WebSocketFrame) {
-            System.out.println("This is a WebSocket frame");
-            System.out.println("Client Channel : " + ctx.channel());
+           //  System.out.println("This is a WebSocket frame");
+            // System.out.println("Client Channel : " + ctx.channel());
             if (msg instanceof BinaryWebSocketFrame) {
-                System.out.println("BinaryWebSocketFrame Received : ");
-                System.out.println(((BinaryWebSocketFrame) msg).content());
+               //  System.out.println("BinaryWebSocketFrame Received : ");
+               //  System.out.println(((BinaryWebSocketFrame) msg).content());
             } else if (msg instanceof TextWebSocketFrame) {
-
-                System.out.println("TextWebSocketFrame Received : ");
 
                 String jsonMsg = ((TextWebSocketFrame) msg).text();
 
-                // ctx.channel().write(new TextWebSocketFrame("Message recieved : " + jsonMsg));
-
-                System.out.println(jsonMsg);
+                // System.out.println(" <--- TextWebSocketFrame Received : " + jsonMsg);
 
 
                 JSONParser parser = new JSONParser();

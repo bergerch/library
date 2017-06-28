@@ -11,10 +11,11 @@ import {WebsocketService} from "./Websocket.service";
 import {Subject} from "rxjs/Subject";
 import {View} from "../reconfiguration/View";
 import {InternetAddress} from "../config/TOMConfiguration";
+import {ReplyListener} from "./ReplyListener.interface";
 
 export interface ICommunicationSystem {
 
-  send(sign: boolean, targets: number[], sm: TOMMessage);
+  send(sign: boolean, targets: number[], sm: TOMMessage, replyListener?: ReplyListener);
   setReplyReceiver(trr: ReplyReceiver);
   sign(sm: TOMMessage);
   close();
@@ -52,26 +53,42 @@ export class CommunicationSystem implements ICommunicationSystem {
       let address: string = 'ws://' + value.address + ':' + value.port;
       let socket: Subject<any> = this.websocketService.createWebsocket(address);
 
+      /*
       // For testing purpose
       socket.subscribe((data) => {
         this.message[key] = data;
         console.log('Received: ', data);
       });
+      */
 
       let connection: ReplicaConnection = new ReplicaConnection(socket, null, null, key);
       this.sessionTable.set(address, connection);
     });
   }
 
-  public send(sign: boolean, targets: number[], sm: TOMMessage) {
-    console.log('CommunicationSystem send() called ', sm);
+  public send(sign: boolean, targets: number[], sm: TOMMessage, replyListener?: ReplyListener) {
+    //console.log('CommunicationSystem send() called ', sm);
+
+    this.sessionTable.forEach((connection: ReplicaConnection, address: string) => {
+
+      connection.getSocket().subscribe((reply) => {
+        //console.log('Received: ', reply);
+        let res = JSON.parse(reply.data);
+        replyListener.replyReceived(res);
+      });
+      //console.log('Subscribed to ' + address);
+    });
 
     this.sessionTable.forEach((connection: ReplicaConnection, address: string) => {
 
       connection.getSocket().next(sm);
-      console.log('Sending to ' + address);
+      //console.log('Sending to ' + address);
 
     });
+
+
+
+
 
   }
 

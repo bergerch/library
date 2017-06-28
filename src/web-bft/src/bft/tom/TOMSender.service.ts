@@ -8,6 +8,7 @@ import {ClientViewController} from "../reconfiguration/ClientViewController.cont
 import {TOMConfiguration} from "../config/TOMConfiguration";
 import {TOMMessage} from "./messages/TOMMessage";
 import {TOMMessageType} from "./messages/TOMMessageType";
+import {ReplyListener} from "../communication/ReplyListener.interface";
 
 
 
@@ -117,9 +118,8 @@ export abstract class TOMSender implements ReplyReceiver, Closeable {
    *
    * @param sm Message to be multicast
    */
-  public TOMulticast(sm: TOMMessage) {
-    console.log('Multicast TOM Message ', sm);
-    this.cs.send(this.useSignatures, this.viewController.getCurrentView().processes, sm);
+  public TOMulticast(sm: TOMMessage, replyListener?: ReplyListener) {
+    this.cs.send(this.useSignatures, this.viewController.getCurrentView().processes, sm, replyListener);
   }
 
   /**
@@ -129,11 +129,10 @@ export abstract class TOMSender implements ReplyReceiver, Closeable {
    * @param reqId unique integer that identifies this request
    * @param reqType TOM_NORMAL, TOM_READONLY or TOM_RECONFIGURATION
    */
-  public TOMulticastData(m: any, reqId: number, reqType: TOMMessageType, operationsId?: number) {
-
+  public TOMulticastData(m: any, reqId: number, reqType: TOMMessageType, operationsId?: number, replyListener?: ReplyListener) {
     let operatId = operationsId ? operationsId : -1;
     this.cs.send(this.useSignatures, this.viewController.getCurrentView().processes,
-      new TOMMessage(this.me, this.session, reqId, operatId, m, this.getViewController().getCurrentView().id, reqType));
+      new TOMMessage(this.me, this.session, reqId, operatId, m, this.getViewController().getCurrentView().id, reqType), replyListener);
   }
 
 

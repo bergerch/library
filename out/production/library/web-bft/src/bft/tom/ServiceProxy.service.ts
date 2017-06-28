@@ -11,6 +11,7 @@ import {ClientViewController} from "../reconfiguration/ClientViewController.cont
 import {TOMMessageType} from "./messages/TOMMessageType";
 import {TOMMessage} from "./messages/TOMMessage";
 import {WebsocketService} from "../communication/Websocket.service";
+import {ReplyListener} from "../communication/ReplyListener.interface";
 
 
 @Injectable()
@@ -75,22 +76,22 @@ export class ServiceProxy extends TOMSender {
     console.log('REPLY ', reply);
   }
 
-  public invokeOrdered(request): any {
-    return this.invoke(request, TOMMessageType.ORDERED_REQUEST);
+  public invokeOrdered(request, replyListener?: ReplyListener): any {
+    return this.invoke(request, TOMMessageType.ORDERED_REQUEST, replyListener);
   }
 
-  public invokeUnordered(request): any {
-    return this.invoke(request, TOMMessageType.UNORDERED_REQUEST);
+  public invokeUnordered(request, replyListener?: ReplyListener): any {
+    return this.invoke(request, TOMMessageType.UNORDERED_REQUEST, replyListener);
   }
 
-  public invokeUnorderedHashed(request): any {
-    return this.invoke(request, TOMMessageType.UNORDERED_HASHED_REQUEST);
+  public invokeUnorderedHashed(request, replyListener?: ReplyListener): any {
+    return this.invoke(request, TOMMessageType.UNORDERED_HASHED_REQUEST, replyListener);
   }
 
-  private invoke(request, reqType: number): any {
-    console.log('Service Proxy invoke() called with ', request);
-    console.log('Request Type is ', reqType);
-    console.log(this);
+  private invoke(request, reqType: number, replyListener?: ReplyListener): any {
+    //console.log('Service Proxy invoke() called with ', request);
+    //console.log('Request Type is ', reqType);
+    //console.log(this);
 
     // Clean all statefull data to prepare for receiving next replies
     this.replies = [];
@@ -112,25 +113,25 @@ export class ServiceProxy extends TOMSender {
 
 
       let viewController: ClientViewController = this.getViewManager();
-      console.log('view controller: ', viewController);
+      //console.log('view controller: ', viewController);
 
 
       let hashResponseController = new HashResponseController(viewController.getCurrentViewPos(this.replyServer),
         viewController.getCurrentViewProcesses().length);
-      console.log('hashResponseController: ', hashResponseController);
+      //console.log('hashResponseController: ', hashResponseController);
 
       let sm: TOMMessage = new TOMMessage(this.me, this.session, this.reqId, this.operationId, request,
         this.getViewManager().getCurrentViewId(), reqType);
 
-      console.log('TOMMessage.ts: ', sm);
+      //console.log('TOMMessage.ts: ', sm);
 
       sm.setReplyServer(this.replyServer);
 
-      this.TOMulticast(sm);
+      this.TOMulticast(sm, replyListener);
     } else {
 
       console.log(reqType);
-       this.TOMulticastData(request, this.reqId, reqType, this.operationId,);
+       this.TOMulticastData(request, this.reqId, reqType, this.operationId, replyListener);
 
     }
 
@@ -141,7 +142,7 @@ export class ServiceProxy extends TOMSender {
     let numServers: number = this.getViewController().getCurrentViewProcesses().length;
     let pos = Math.floor(Math.random() * numServers);
     let id = this.getViewController().getCurrentViewProcesses()[pos];
-    console.log('getRandomlyServerId ', id);
+    //console.log('getRandomlyServerId ', id);
     return id;
   }
 
