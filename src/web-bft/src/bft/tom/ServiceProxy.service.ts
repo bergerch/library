@@ -2,7 +2,7 @@
  * Created by chris on 23.04.17.
  */
 import {Injectable} from '@angular/core';
-import {TOMSender} from "./TOMSender.service";
+import {ReplyReceiver, TOMSender} from "./TOMSender.service";
 import {HashResponseController} from "./HashResponseController.controller";
 import {TOMConfiguration} from "../config/TOMConfiguration";
 import {Comparator} from "./util/Comparator.interface";
@@ -10,12 +10,11 @@ import {Extractor} from "bft/tom/util/Extractor.interface";
 import {ClientViewController} from "../reconfiguration/ClientViewController.controller";
 import {TOMMessageType} from "./messages/TOMMessageType";
 import {TOMMessage} from "./messages/TOMMessage";
-import {WebsocketService} from "../communication/Websocket.service";
 import {ReplyListener} from "../communication/ReplyListener.interface";
 
 
 @Injectable()
-export class ServiceProxy extends TOMSender {
+export class ServiceProxy extends TOMSender implements ReplyReceiver {
 
   reqId: number = -1;
   operationId: number = -1;
@@ -73,6 +72,13 @@ export class ServiceProxy extends TOMSender {
    */
   public replyReceived(reply: TOMMessage) {
     // TODO
+
+    // Should be invoked by the Communication System
+    // Validate the reply (Reply Validator)
+    // If okay execute the app defined requestListener's request received() (Reply Executor)
+
+
+
     console.log('REPLY ', reply);
   }
 

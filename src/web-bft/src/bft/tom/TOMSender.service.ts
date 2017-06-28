@@ -35,7 +35,7 @@ export interface Closeable {
 }
 
 @Injectable()
-export abstract class TOMSender implements ReplyReceiver, Closeable {
+export abstract class TOMSender implements Closeable {
 
   me: number; // process id
   session: number = 0; // session id
@@ -70,14 +70,6 @@ export abstract class TOMSender implements ReplyReceiver, Closeable {
     return this.viewController;
   }
 
-  /**
-   * This is the method invoked by the client side communication system, and where the
-   * code to handle the reply is to be written. This method is overwritten in ServiceProxy
-   *
-   * @param reply The reply delivered by the client side communication system
-   */
-  public replyReceived(reply: TOMMessage) {
-  }
 
   public close() {
     this.cs.close();
