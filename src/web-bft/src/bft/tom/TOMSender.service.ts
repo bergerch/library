@@ -8,7 +8,6 @@ import {ClientViewController} from "../reconfiguration/ClientViewController.cont
 import {TOMConfiguration} from "../config/TOMConfiguration";
 import {TOMMessage} from "./messages/TOMMessage";
 import {TOMMessageType} from "./messages/TOMMessageType";
-import {ReplyListener} from "../communication/ReplyListener.interface";
 
 
 export interface ReplyReceiver {
@@ -22,6 +21,7 @@ export interface ReplyReceiver {
   replyReceived(reply: TOMMessage);
 
 }
+
 
 export interface Closeable {
   /**
@@ -49,9 +49,7 @@ export abstract class TOMSender implements Closeable {
   public constructor(private TOMConfiguration: TOMConfiguration) {
 
     this.viewController = new ClientViewController(this.me, this.TOMConfiguration);
-
     this.me = Math.round(Math.random() * 100000);
-
     this.cs = new CommunicationSystem(this.me, this.viewController);
 
   }
@@ -83,14 +81,12 @@ export abstract class TOMSender implements Closeable {
   }
 
   generateRequestId(type: TOMMessageType): number {
-    // TODO: if multi-threaded implement lock here
     let id;
     if (type === TOMMessageType.ORDERED_REQUEST) {
       id = this.sequence++;
     } else {
       id = this.unorderedMessageSequence++;
     }
-    // TODO unlock
     return id;
 
   }
@@ -120,7 +116,8 @@ export abstract class TOMSender implements Closeable {
   public TOMulticastData(m: any, reqId: number, reqType: TOMMessageType, operationsId?: number, replyReceiver?: ReplyReceiver) {
     let operatId = operationsId ? operationsId : -1;
     this.cs.send(this.useSignatures, this.viewController.getCurrentView().processes,
-      new TOMMessage(this.me, this.session, reqId, operatId, m, this.getViewController().getCurrentView().id, reqType), replyReceiver);
+      new TOMMessage(this.me, this.session, reqId, operatId, m, this.getViewController().getCurrentView().id, reqType),
+      replyReceiver);
   }
 
 

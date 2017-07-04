@@ -11,6 +11,7 @@ import {ClientViewController} from "../reconfiguration/ClientViewController.cont
 import {TOMMessageType} from "./messages/TOMMessageType";
 import {TOMMessage} from "./messages/TOMMessage";
 import {ReplyListener} from "../communication/ReplyListener.interface";
+import {View} from "../reconfiguration/View";
 
 
 @Injectable()
@@ -24,7 +25,7 @@ export class ServiceProxy extends TOMSender implements ReplyReceiver {
   replyServer: number;
   invokeUnorderedHashedTimeout: number = 10;
 
-  replyListener: ReplyListener;
+  replyListener: ReplyListener; // app callback to execute on reply
 
   requestType: TOMMessageType;
   replies: TOMMessage[] = []; // Replies from replicas are stored here
@@ -172,8 +173,9 @@ export class ServiceProxy extends TOMSender implements ReplyReceiver {
   }
 
 
-  private reconfigureTo(view) {
-    // TODO
+  private reconfigureTo(view: View): boolean {
+    // TODO implement view reconfig here
+    return false;
   }
 
 }
