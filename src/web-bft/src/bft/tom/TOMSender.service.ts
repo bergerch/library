@@ -11,7 +11,6 @@ import {TOMMessageType} from "./messages/TOMMessageType";
 import {ReplyListener} from "../communication/ReplyListener.interface";
 
 
-
 export interface ReplyReceiver {
 
   /**
@@ -45,7 +44,6 @@ export abstract class TOMSender implements Closeable {
   useSignatures: boolean = false; // use MACs or signatures
   opCounter: number = 0; // Atomic counter
   protected viewController: ClientViewController;
-
 
 
   public constructor(private TOMConfiguration: TOMConfiguration) {
@@ -98,9 +96,7 @@ export abstract class TOMSender implements Closeable {
   }
 
   generateOperationId(): number {
-    // TODO: if multi-threaded implement lock here
     this.opCounter++;
-    // TODO unlock
     return this.opCounter;
   }
 
@@ -127,9 +123,5 @@ export abstract class TOMSender implements Closeable {
       new TOMMessage(this.me, this.session, reqId, operatId, m, this.getViewController().getCurrentView().id, reqType), replyReceiver);
   }
 
-
-  sendMessageToTargets(m: any, reqId: number, targets: number[], type: TOMMessageType, operationsId?: number) {
-
-  }
 
 }

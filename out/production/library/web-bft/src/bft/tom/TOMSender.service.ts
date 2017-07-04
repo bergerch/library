@@ -11,7 +11,6 @@ import {TOMMessageType} from "./messages/TOMMessageType";
 import {ReplyListener} from "../communication/ReplyListener.interface";
 
 
-
 export interface ReplyReceiver {
 
   /**
@@ -35,7 +34,7 @@ export interface Closeable {
 }
 
 @Injectable()
-export abstract class TOMSender implements ReplyReceiver, Closeable {
+export abstract class TOMSender implements Closeable {
 
   me: number; // process id
   session: number = 0; // session id
@@ -45,7 +44,6 @@ export abstract class TOMSender implements ReplyReceiver, Closeable {
   useSignatures: boolean = false; // use MACs or signatures
   opCounter: number = 0; // Atomic counter
   protected viewController: ClientViewController;
-
 
 
   public constructor(private TOMConfiguration: TOMConfiguration) {
@@ -70,14 +68,6 @@ export abstract class TOMSender implements ReplyReceiver, Closeable {
     return this.viewController;
   }
 
-  /**
-   * This is the method invoked by the client side communication system, and where the
-   * code to handle the reply is to be written. This method is overwritten in ServiceProxy
-   *
-   * @param reply The reply delivered by the client side communication system
-   */
-  public replyReceived(reply: TOMMessage) {
-  }
 
   public close() {
     this.cs.close();
@@ -106,9 +96,7 @@ export abstract class TOMSender implements ReplyReceiver, Closeable {
   }
 
   generateOperationId(): number {
-    // TODO: if multi-threaded implement lock here
     this.opCounter++;
-    // TODO unlock
     return this.opCounter;
   }
 
@@ -118,8 +106,8 @@ export abstract class TOMSender implements ReplyReceiver, Closeable {
    *
    * @param sm Message to be multicast
    */
-  public TOMulticast(sm: TOMMessage, replyListener?: ReplyListener) {
-    this.cs.send(this.useSignatures, this.viewController.getCurrentView().processes, sm, replyListener);
+  public TOMulticast(sm: TOMMessage, replyReceiver?: ReplyReceiver) {
+    this.cs.send(this.useSignatures, this.viewController.getCurrentView().processes, sm, replyReceiver);
   }
 
   /**
@@ -129,15 +117,11 @@ export abstract class TOMSender implements ReplyReceiver, Closeable {
    * @param reqId unique integer that identifies this request
    * @param reqType TOM_NORMAL, TOM_READONLY or TOM_RECONFIGURATION
    */
-  public TOMulticastData(m: any, reqId: number, reqType: TOMMessageType, operationsId?: number, replyListener?: ReplyListener) {
+  public TOMulticastData(m: any, reqId: number, reqType: TOMMessageType, operationsId?: number, replyReceiver?: ReplyReceiver) {
     let operatId = operationsId ? operationsId : -1;
     this.cs.send(this.useSignatures, this.viewController.getCurrentView().processes,
-      new TOMMessage(this.me, this.session, reqId, operatId, m, this.getViewController().getCurrentView().id, reqType), replyListener);
+      new TOMMessage(this.me, this.session, reqId, operatId, m, this.getViewController().getCurrentView().id, reqType), replyReceiver);
   }
 
-
-  sendMessageToTargets(m: any, reqId: number, targets: number[], type: TOMMessageType, operationsId?: number) {
-
-  }
 
 }

@@ -43,5 +43,12 @@ export class ViewController {
     return this.viewStore;
   }
 
+  public getCurrentViewF() {
+    return this.getCurrentView().getF();
+  }
+
+  public getCurrentViewN() {
+    return this.getCurrentView().getN();
+  }
 
 }

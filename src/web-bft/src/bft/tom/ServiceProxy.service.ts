@@ -18,7 +18,7 @@ export class ServiceProxy extends TOMSender implements ReplyReceiver {
 
   reqId: number = -1;
   operationId: number = -1;
-  replyQuorum: number = 3; // size of the reply quorum (!)TODO Load from Config
+  replyQuorum: number; // size of the reply quorum
   receivedReplies: number = 0; // Number of received replies
   invokeTimeout: number = 40;
   replyServer: number;
@@ -39,12 +39,9 @@ export class ServiceProxy extends TOMSender implements ReplyReceiver {
   public constructor(TOMConfiguration: TOMConfiguration) {
     super(TOMConfiguration);
 
-    // FIXME Why is this still undefined?
-    // this.replies = new TOMMessage.ts[super.getViewManager().getCurrentView().getN()];
-
     this.comparator = (this.comparator != null) ? this.comparator : {
       compare: function (o1: any, o2: any): number {
-        return JSON.stringify(o1) === JSON.stringify(o2) ? 0 : -1;
+        return JSON.stringify(o1) === JSON.stringify(o2) ? 1 : 0;
       }
     };
 
@@ -73,19 +70,35 @@ export class ServiceProxy extends TOMSender implements ReplyReceiver {
    * @param reply The reply delivered by the client side communication system
    */
   public replyReceived(reply: TOMMessage) {
-    console.log('Received reply from ', reply.sender);
 
 
-    reply[reply.sender] = reply.content;
+    // TODO Handle Reconfiguration reply
 
+    let lastReceived = reply.sender;
+    this.replies[lastReceived] = reply;
 
-    // Should be invoked by the Communication System
-    // Validate the reply (Reply Validator)
-    // If okay execute the app defined requestListener's request received() (Reply Executor)
+    // Compare content with other replies, compare same content for same viewId and same operationId
+    let sameContent = 1;
+    for (let i in this.replies) {
+        if (Number(i) !== lastReceived &&
+          this.comparator.compare(this.replies[i].content, reply.content) &&
+          this.replies[i].viewId === reply.viewId &&
+          this.replies[i].operationId === reply.operationId &&
+          this.replies[i].sequence === reply.sequence) {
+            sameContent++;
+        }
+      }
 
+    let replyQuorum = this.getReplyQuorum();
 
+    // When response passes quorum, deliver it to application via replyListener
+    if (sameContent >= replyQuorum) {
+      this.response = this.extractor.extractResponse(this.replies, sameContent, lastReceived);
+      this.replies = [];
+      console.log('validated ', this.response);
+      this.replyListener.replyReceived(this.response);
+    }
 
-    console.log('REPLY ', reply);
   }
 
   public invokeOrdered(request, replyListener?: ReplyListener): any {
@@ -101,9 +114,6 @@ export class ServiceProxy extends TOMSender implements ReplyReceiver {
   }
 
   private invoke(request, reqType: number, replyListener?: ReplyListener): any {
-    //console.log('Service Proxy invoke() called with ', request);
-    //console.log('Request Type is ', reqType);
-    //console.log(this);
 
     // Clean all statefull data to prepare for receiving next replies
     this.replies = [];
@@ -139,7 +149,7 @@ export class ServiceProxy extends TOMSender implements ReplyReceiver {
 
     } else {
 
-       this.TOMulticastData(request, this.reqId, reqType, this.operationId, this);
+      this.TOMulticastData(request, this.reqId, reqType, this.operationId, this);
 
     }
 
@@ -150,15 +160,14 @@ export class ServiceProxy extends TOMSender implements ReplyReceiver {
     let f: number = this.getViewController().getCurrentViewN();
 
     // formula for quorum is [(n+f)/2]+1
-    let replyQuorum = Math.ceil((n+f)/2)+1;
+    let replyQuorum = Math.ceil((n + f) / 2) + 1;
     return replyQuorum;
-}
+  }
 
   private getRandomlyServerId(): number {
     let numServers: number = this.getViewController().getCurrentViewProcesses().length;
     let pos = Math.floor(Math.random() * numServers);
     let id = this.getViewController().getCurrentViewProcesses()[pos];
-    //console.log('getRandomlyServerId ', id);
     return id;
   }
 
