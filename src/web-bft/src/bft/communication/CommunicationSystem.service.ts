@@ -15,7 +15,7 @@ import {ReplyListener} from "./ReplyListener.interface";
 
 export interface ICommunicationSystem {
 
-  send(sign: boolean, targets: number[], sm: TOMMessage, replyListener?: ReplyListener);
+  send(sign: boolean, targets: number[], sm: TOMMessage, replyReceiver?: ReplyReceiver);
   setReplyReceiver(trr: ReplyReceiver);
   sign(sm: TOMMessage);
   close();
@@ -66,7 +66,7 @@ export class CommunicationSystem implements ICommunicationSystem {
     });
   }
 
-  public send(sign: boolean, targets: number[], sm: TOMMessage, replyListener?: ReplyListener) {
+  public send(sign: boolean, targets: number[], sm: TOMMessage, replyReceiver?: ReplyReceiver) {
     //console.log('CommunicationSystem send() called ', sm);
 
     this.sessionTable.forEach((connection: ReplicaConnection, address: string) => {
@@ -74,7 +74,7 @@ export class CommunicationSystem implements ICommunicationSystem {
       connection.getSocket().subscribe((reply) => {
         //console.log('Received: ', reply);
         let res = JSON.parse(reply.data);
-        replyListener.replyReceived(res);
+        replyReceiver.replyReceived(res);
       });
       //console.log('Subscribed to ' + address);
     });

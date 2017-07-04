@@ -18,11 +18,13 @@ export class ServiceProxy extends TOMSender implements ReplyReceiver {
 
   reqId: number = -1;
   operationId: number = -1;
-  replyQuorum: number = 2; // size of the reply quorum (!)TODO Load from Config
+  replyQuorum: number = 3; // size of the reply quorum (!)TODO Load from Config
   receivedReplies: number = 0; // Number of received replies
   invokeTimeout: number = 40;
   replyServer: number;
   invokeUnorderedHashedTimeout: number = 10;
+
+  replyListener: ReplyListener;
 
   requestType: TOMMessageType;
   replies: TOMMessage[] = []; // Replies from replicas are stored here
@@ -71,7 +73,11 @@ export class ServiceProxy extends TOMSender implements ReplyReceiver {
    * @param reply The reply delivered by the client side communication system
    */
   public replyReceived(reply: TOMMessage) {
-    // TODO
+    console.log('Received reply from ', reply.sender);
+
+
+    reply[reply.sender] = reply.content;
+
 
     // Should be invoked by the Communication System
     // Validate the reply (Reply Validator)
@@ -103,7 +109,8 @@ export class ServiceProxy extends TOMSender implements ReplyReceiver {
     this.replies = [];
     this.receivedReplies = 0;
     this.response = null;
-    // this.replyQuorum = this.getReplyQuorum();
+    this.replyListener = replyListener;
+    this.replyQuorum = this.getReplyQuorum();
 
     // Send the request to the replicas, and get its ID
     this.reqId = this.generateRequestId(reqType);
@@ -119,30 +126,33 @@ export class ServiceProxy extends TOMSender implements ReplyReceiver {
 
 
       let viewController: ClientViewController = this.getViewManager();
-      //console.log('view controller: ', viewController);
-
 
       let hashResponseController = new HashResponseController(viewController.getCurrentViewPos(this.replyServer),
         viewController.getCurrentViewProcesses().length);
-      //console.log('hashResponseController: ', hashResponseController);
 
       let sm: TOMMessage = new TOMMessage(this.me, this.session, this.reqId, this.operationId, request,
         this.getViewManager().getCurrentViewId(), reqType);
 
-      //console.log('TOMMessage.ts: ', sm);
-
       sm.setReplyServer(this.replyServer);
 
-      this.TOMulticast(sm, replyListener);
+      this.TOMulticast(sm, this);
+
     } else {
 
-      console.log(reqType);
-       this.TOMulticastData(request, this.reqId, reqType, this.operationId, replyListener);
+       this.TOMulticastData(request, this.reqId, reqType, this.operationId, this);
 
     }
 
-
   }
+
+  private getReplyQuorum(): number {
+    let n: number = this.getViewController().getCurrentViewF();
+    let f: number = this.getViewController().getCurrentViewN();
+
+    // formula for quorum is [(n+f)/2]+1
+    let replyQuorum = Math.ceil((n+f)/2)+1;
+    return replyQuorum;
+}
 
   private getRandomlyServerId(): number {
     let numServers: number = this.getViewController().getCurrentViewProcesses().length;
