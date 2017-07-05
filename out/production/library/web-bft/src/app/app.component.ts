@@ -29,7 +29,6 @@ export class AppComponent implements OnInit, ReplyListener {
   reply: any;
 
   constructor(websocketService: WebsocketService, private counterProxy: ServiceProxy) {
-
   }
 
   ngOnInit() {
@@ -39,25 +38,20 @@ export class AppComponent implements OnInit, ReplyListener {
   replyReceived(sm: TOMMessage) {
     this.count = sm.content;
     this.message = "" + sm.content;
-    // console.log(sm);
   }
 
   launchCounter() {
-
 
     // Counter already initialized
     if (this.counterSubscription) {
       this.counterSubscription.unsubscribe();
     }
-    this.counter = Observable.interval(100);
+
+    this.counter = Observable.interval(10);
     this.counterSubscription = this.counter.subscribe((num) => {
       this.countChange.emit(this.counterValue);
       this.sentMessage = "" + this.counterValue;
-      // console.log('application called counterProxy.invokeOrdered() with ', {
-      //  counter: this.counterValue
-      // });
       this.reply = this.counterProxy.invokeOrdered(this.counterValue, this);
-      // console.log(this.message);
     });
 
 

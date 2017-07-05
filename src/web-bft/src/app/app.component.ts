@@ -32,6 +32,7 @@ export class AppComponent implements OnInit, ReplyListener {
   }
 
   ngOnInit() {
+
   }
 
   replyReceived(sm: TOMMessage) {

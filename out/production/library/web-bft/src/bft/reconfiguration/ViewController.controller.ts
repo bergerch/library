@@ -51,4 +51,10 @@ export class ViewController {
     return this.getCurrentView().getN();
   }
 
+  public setCurrentView(view: View) {
+    this.lastView = this.currentView;
+    this.currentView = view;
+    this.viewStore.storeView(view);
+  }
+
 }

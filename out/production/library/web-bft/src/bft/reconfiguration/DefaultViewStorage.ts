@@ -6,7 +6,7 @@ import {Injectable} from "@angular/core";
 export class DefaultViewStorage implements ViewStorage {
 
 
-  public storeView(view: View): void {
+  public storeView(view: View) {
 
     console.log('DEBUG storeView()');
     if (view !== this.readView()) {

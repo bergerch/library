@@ -72,13 +72,30 @@ export class ServiceProxy extends TOMSender implements ReplyReceiver {
    */
   public replyReceived(reply: TOMMessage) {
 
-
-    // TODO Handle Reconfiguration reply
-
     let lastReceived = reply.sender;
     this.replies[lastReceived] = reply;
+    let replyQuorum = this.getReplyQuorum();
 
-    // Compare content with other replies, compare same content for same viewId and same operationId
+
+    /* Handle Reconfiguration from reply */
+
+    let viewChange = reply.viewId > this.getViewController().getCurrentViewId() ? 1 : 0;
+    for (let i in this.replies) {
+      if (Number(i) !== lastReceived &&
+        this.replies[i].viewId === reply.viewId) {
+        viewChange++
+      }
+    }
+
+    if (viewChange >= replyQuorum) {
+      this.reconfigureTo(reply.content);
+      return;
+    }
+
+
+    /* Compare content with other replies,
+     * compare same content for same viewId and same operationId */
+
     let sameContent = 1;
     for (let i in this.replies) {
         if (Number(i) !== lastReceived &&
@@ -90,9 +107,10 @@ export class ServiceProxy extends TOMSender implements ReplyReceiver {
         }
       }
 
-    let replyQuorum = this.getReplyQuorum();
 
-    // When response passes quorum, deliver it to application via replyListener
+    // When response passes quorum,
+    // deliver it to application via replyListener
+
     if (sameContent >= replyQuorum) {
       this.response = this.extractor.extractResponse(this.replies, sameContent, lastReceived);
       this.replies = [];
@@ -173,9 +191,9 @@ export class ServiceProxy extends TOMSender implements ReplyReceiver {
   }
 
 
-  private reconfigureTo(view: View): boolean {
-    // TODO implement view reconfig here
-    return false;
+  private reconfigureTo(view: View) {
+    console.log('RECONFIG!');
+    this.getViewController().setCurrentView(view);
   }
 
 }
