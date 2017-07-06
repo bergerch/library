@@ -4,8 +4,8 @@
 /dist
 /tmp
 /out
-/src/*.js
-/src/*.js.map
+/src/**/*.js
+/src/**/*.js.map
 
 #BFT config view
 /config/currentView
