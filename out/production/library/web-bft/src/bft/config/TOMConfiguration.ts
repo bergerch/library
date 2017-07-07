@@ -25,10 +25,10 @@ export class TOMConfiguration {
   /** Hosts Configurations */
 
   hosts: Host[] = [
-    {server_id: 0, address: '127.0.0.1', port: 11000},
-    {server_id: 1, address: '127.0.0.1', port: 11010},
-    {server_id: 2, address: '127.0.0.1', port: 11020},
-    {server_id: 3, address: '127.0.0.1', port: 11030}
+    {server_id: 0, address: '127.0.0.1', port: 11005},
+    {server_id: 1, address: '127.0.0.1', port: 11015},
+    {server_id: 2, address: '127.0.0.1', port: 11025},
+    {server_id: 3, address: '127.0.0.1', port: 11035}
     /*
     ,
     {server_id: 4, address: '127.0.0.1', port: 11040},

@@ -131,7 +131,7 @@ public class NettyClientServerCommunicationSystemServerSide extends SimpleChanne
 			// Bind and start to accept incoming connections.
 			ChannelFuture f = b.bind(new InetSocketAddress(controller.getStaticConf().getHost(
 					controller.getStaticConf().getProcessId()),
-					controller.getStaticConf().getPort(controller.getStaticConf().getProcessId()))).sync();
+					controller.getStaticConf().getPort(controller.getStaticConf().getProcessId())+5)).sync();
 
 
 			/** bergerch end **/
@@ -297,8 +297,6 @@ public class NettyClientServerCommunicationSystemServerSide extends SimpleChanne
 			k++;
 		}
 
-		// FixMe For testing purpose
-		/*
 
 		//serialize message
 		DataOutputStream dos = null;
@@ -394,7 +392,7 @@ public class NettyClientServerCommunicationSystemServerSide extends SimpleChanne
 				rl.readLock().unlock();
 			}
 		}
-		*/
+
 
 	}
 
