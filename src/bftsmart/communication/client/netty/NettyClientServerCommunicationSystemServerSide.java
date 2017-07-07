@@ -71,6 +71,7 @@ public class NettyClientServerCommunicationSystemServerSide extends SimpleChanne
 
 
 	private Channel mainChannel;
+	private Channel secondChannel;
 
 	private WebSocketHandler webSocketHandler;
 	private HashMap<Integer, WebClientServerSession> webClientConnections;
@@ -134,6 +135,26 @@ public class NettyClientServerCommunicationSystemServerSide extends SimpleChanne
 					controller.getStaticConf().getPort(controller.getStaticConf().getProcessId())+5)).sync();
 
 
+
+
+			EventLoopGroup bossGroup2 = new NioEventLoopGroup();
+			EventLoopGroup workerGroup2 = (nWorkers > 0 ? new NioEventLoopGroup(nWorkers) : new NioEventLoopGroup());
+			ServerBootstrap b2 = new ServerBootstrap();
+			b2.group(bossGroup2, workerGroup2)
+					.channel(NioServerSocketChannel.class)
+					.childHandler(new ChannelInitializer<SocketChannel>() {
+						@Override
+						public void initChannel(SocketChannel ch) throws Exception {
+							ch.pipeline().addLast(serverPipelineFactory.getDecoder());
+							ch.pipeline().addLast(serverPipelineFactory.getEncoder());
+							ch.pipeline().addLast(serverPipelineFactory.getHandler());
+						}
+					})	.childOption(ChannelOption.SO_KEEPALIVE, true).childOption(ChannelOption.TCP_NODELAY, true);
+			// Bind and start to accept incoming connections.
+			ChannelFuture f2 = b2.bind(new InetSocketAddress(controller.getStaticConf().getHost(
+					controller.getStaticConf().getProcessId()),
+					controller.getStaticConf().getPort(controller.getStaticConf().getProcessId()))).sync();
+
 			/** bergerch end **/
 
 			System.out.println("-- ID = " + controller.getStaticConf().getProcessId());
@@ -147,7 +168,8 @@ public class NettyClientServerCommunicationSystemServerSide extends SimpleChanne
 			//******* EDUARDO END **************//
 
 
-            mainChannel = f.channel();
+            mainChannel = f2.channel();
+            secondChannel = f.channel();
 
 
 		} catch (NoSuchAlgorithmException ex) {
@@ -172,6 +194,7 @@ public class NettyClientServerCommunicationSystemServerSide extends SimpleChanne
             this.closed = true;
 
             closeChannelAndEventLoop(mainChannel);
+			closeChannelAndEventLoop(secondChannel);
 
             rl.readLock().lock();
             ArrayList<NettyClientServerSession> sessions = new ArrayList<>(sessionTable.values());

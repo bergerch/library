@@ -72,7 +72,6 @@ export class ServiceProxy extends TOMSender implements ReplyReceiver {
    */
   public replyReceived(reply: TOMMessage) {
 
-
     let lastReceived = reply.sender;
     this.replies[lastReceived] = reply;
     let replyQuorum = this.getReplyQuorum();
@@ -90,6 +89,8 @@ export class ServiceProxy extends TOMSender implements ReplyReceiver {
 
     if (viewChange >= replyQuorum) {
       this.reconfigureTo(reply.content);
+      console.log("Reconf Message ", reply);
+      return;
     }
 
 

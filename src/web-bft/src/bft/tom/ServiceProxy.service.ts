@@ -89,6 +89,7 @@ export class ServiceProxy extends TOMSender implements ReplyReceiver {
 
     if (viewChange >= replyQuorum) {
       this.reconfigureTo(reply.content);
+      console.log("Reconf Message ", reply);
       return;
     }
 
