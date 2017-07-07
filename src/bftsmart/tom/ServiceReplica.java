@@ -371,9 +371,11 @@ public class ServiceReplica {
                     }
                 } else if (request.getViewID() < SVController.getCurrentViewId()) { // message sender had an old view, resend the message to
                                                                                     // him (but only if it came from consensus an not state transfer)
-                    
-                    tomLayer.getCommunication().send(new int[]{request.getSender()}, new TOMMessage(SVController.getStaticConf().getProcessId(),
-                            request.getSession(), request.getSequence(), TOMUtil.getBytes(SVController.getCurrentView()), SVController.getCurrentViewId()));
+
+                    TOMMessage sm = new TOMMessage(SVController.getStaticConf().getProcessId(),
+                            request.getSession(), request.getSequence(), TOMUtil.getBytes(SVController.getCurrentView()), SVController.getCurrentViewId());
+                    sm.view_change_response = true;
+                    tomLayer.getCommunication().send(new int[]{request.getSender()}, sm);
                 }
                 requestCount++;
             }

@@ -93,4 +93,8 @@ public class View implements Serializable {
 		return addresses.get(id);
 	}
 
+	public Map<Integer,InetSocketAddress> getAddresses() {
+		return addresses;
+	}
+
 }

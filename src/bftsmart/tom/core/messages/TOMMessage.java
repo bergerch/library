@@ -48,6 +48,11 @@ public class TOMMessage extends SystemMessage implements Externalizable, Compara
 	//the fields bellow are not serialized!!!
 	private transient int id; // ID for this message. It should be unique
 
+
+	// Flag indicating that this  Message's content contains a View Object
+	public transient boolean view_change_response = false;
+
+
 	public transient long timestamp = 0; // timestamp to be used by the application
 
         public transient long seed = 0; // seed for the nonces

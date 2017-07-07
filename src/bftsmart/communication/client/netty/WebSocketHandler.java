@@ -1,8 +1,10 @@
 package bftsmart.communication.client.netty;
 
 import bftsmart.communication.client.CommunicationSystemServerSide;
+import bftsmart.reconfiguration.View;
 import bftsmart.tom.core.messages.TOMMessage;
 import bftsmart.tom.core.messages.TOMMessageType;
+import bftsmart.tom.util.TOMUtil;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.handler.codec.http.FullHttpMessage;
@@ -18,10 +20,12 @@ import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
+import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.Map;
 
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
@@ -50,14 +54,44 @@ public class WebSocketHandler extends ChannelInboundHandlerAdapter {
         String content = "";
 
 
-        // FIXME do not assume int
-        byte[] reply = sm.getContent();
-        try {
-            int newValue = new DataInputStream(new ByteArrayInputStream(reply)).readInt();
-            content = content + newValue;
-            //System.outprintln(newValue);
-        } catch (IOException e) {
-            e.printStackTrace();
+        System.out.println("View change response: " + sm.view_change_response);
+        if(sm.view_change_response) {
+            Object obj = TOMUtil.getObject(sm.getContent());
+            if(obj instanceof View) {
+                JSONObject viewJSON = new JSONObject();
+                viewJSON.put("id", new Integer(((View) obj).getId()));
+                viewJSON.put("f", new Integer(((View) obj).getF()));
+                viewJSON.put("processes", ((View) obj).getProcesses());
+
+                Map<Integer, InetSocketAddress> map = ((View) obj).getAddresses();
+
+
+               //JSON Array ==
+                for( Map.Entry e: map.entrySet()) {
+
+                    Integer i = (Integer) e.getKey();
+                    InetSocketAddress addr = (InetSocketAddress) e.getValue();
+                    String address = addr.getHostName();
+                    Integer port = new Integer(addr.getPort());
+
+                    JSONObject addEntry = new JSONObject();
+                   // addEntry.put()
+                    // TODO Tork in Progress
+
+                }
+
+                viewJSON.put("addresses", ((View) obj).getAddresses());
+            }
+        } else {
+            // FIXME do not assume int
+            byte[] reply = sm.getContent();
+            try {
+                int newValue = new DataInputStream(new ByteArrayInputStream(reply)).readInt();
+                content = content + newValue;
+                //System.outprintln(newValue);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
 
         JSONObject msg = new JSONObject();
