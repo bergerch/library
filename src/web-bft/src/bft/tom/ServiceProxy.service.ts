@@ -75,7 +75,6 @@ export class ServiceProxy extends TOMSender implements ReplyReceiver {
     let lastReceived = reply.sender;
     this.replies[lastReceived] = reply;
     let replyQuorum = this.getReplyQuorum();
-    
 
     /* Handle Reconfiguration from reply */
 
@@ -89,13 +88,17 @@ export class ServiceProxy extends TOMSender implements ReplyReceiver {
 
     if (viewChange >= replyQuorum) {
       reply.content = JSON.parse(reply.content);
-      let hosts : Host[] = [];
+      let hosts: Host[] = [];
       for (let k in reply.content.addresses) {
-        hosts.push({server_id: reply.content.addresses[k].id, port: reply.content.addresses[k].port, address: reply.content.addresses[k].address})
+        hosts.push({
+          server_id: reply.content.addresses[k].id,
+          port: reply.content.addresses[k].port,
+          address: reply.content.addresses[k].address
+        })
       }
       let view: View = new View(reply.content.id, reply.content.processes, reply.content.f, hosts);
       console.log("Reconf Message ", reply);
-      this.reconfigureTo(reply.content);
+      this.reconfigureTo(view);
       return;
     }
 
@@ -105,14 +108,14 @@ export class ServiceProxy extends TOMSender implements ReplyReceiver {
 
     let sameContent = 1;
     for (let i in this.replies) {
-        if (Number(i) !== lastReceived &&
-          this.comparator.compare(this.replies[i].content, reply.content) &&
-          this.replies[i].viewId === reply.viewId &&
-          this.replies[i].operationId === reply.operationId &&
-          this.replies[i].sequence === reply.sequence) {
-            sameContent++;
-        }
+      if (Number(i) !== lastReceived &&
+        this.comparator.compare(this.replies[i].content, reply.content) &&
+        this.replies[i].viewId === reply.viewId &&
+        this.replies[i].operationId === reply.operationId &&
+        this.replies[i].sequence === reply.sequence) {
+        sameContent++;
       }
+    }
 
 
     // When response passes quorum,
@@ -199,8 +202,8 @@ export class ServiceProxy extends TOMSender implements ReplyReceiver {
 
 
   private reconfigureTo(view: View) {
-    console.log('RECONFIG!');
     this.getViewController().setCurrentView(view);
+    this.cs.updateConnections();
   }
 
 }

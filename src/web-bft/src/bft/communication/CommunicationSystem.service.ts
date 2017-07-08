@@ -88,6 +88,8 @@ export class CommunicationSystem implements ICommunicationSystem {
 
   public updateConnections() {
 
+    // TODO Update sessions Table
+
   }
 
   public reconnect() {
