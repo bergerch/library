@@ -77,6 +77,8 @@ export class ServiceProxy extends TOMSender implements ReplyReceiver {
     let replyQuorum = this.getReplyQuorum();
 
 
+    console.log(reply);
+
     /* Handle Reconfiguration from reply */
 
     let viewChange = reply.viewId > this.getViewController().getCurrentViewId() ? 1 : 0;
@@ -88,8 +90,8 @@ export class ServiceProxy extends TOMSender implements ReplyReceiver {
     }
 
     if (viewChange >= replyQuorum) {
-      this.reconfigureTo(reply.content);
       console.log("Reconf Message ", reply);
+      this.reconfigureTo(reply.content);
       return;
     }
 

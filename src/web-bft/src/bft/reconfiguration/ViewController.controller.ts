@@ -15,6 +15,7 @@ export class ViewController {
   public constructor(procId: number, TOMConfiguration: TOMConfiguration) {
 
     this.currentView = new View(0, TOMConfiguration.initial_view, TOMConfiguration.f, TOMConfiguration.hosts);
+    this.viewStore = new DefaultViewStorage();
   }
 
   public getCurrentViewProcesses() {
@@ -44,11 +45,11 @@ export class ViewController {
   }
 
   public getCurrentViewF() {
-    return this.getCurrentView().getF();
+    return this.currentView.f;
   }
 
   public getCurrentViewN() {
-    return this.getCurrentView().getN();
+    return this.currentView.processes.length;
   }
 
   public setCurrentView(view: View) {

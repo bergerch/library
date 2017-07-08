@@ -4,7 +4,7 @@
 import {Injectable} from '@angular/core';
 import {ReplyReceiver, TOMSender} from "./TOMSender.service";
 import {HashResponseController} from "./HashResponseController.controller";
-import {TOMConfiguration} from "../config/TOMConfiguration";
+import {Host, InternetAddress, TOMConfiguration} from "../config/TOMConfiguration";
 import {Comparator} from "./util/Comparator.interface";
 import {Extractor} from "bft/tom/util/Extractor.interface";
 import {ClientViewController} from "../reconfiguration/ClientViewController.controller";
@@ -75,7 +75,7 @@ export class ServiceProxy extends TOMSender implements ReplyReceiver {
     let lastReceived = reply.sender;
     this.replies[lastReceived] = reply;
     let replyQuorum = this.getReplyQuorum();
-
+    
 
     /* Handle Reconfiguration from reply */
 
@@ -88,8 +88,14 @@ export class ServiceProxy extends TOMSender implements ReplyReceiver {
     }
 
     if (viewChange >= replyQuorum) {
-      this.reconfigureTo(reply.content);
+      reply.content = JSON.parse(reply.content);
+      let hosts : Host[] = [];
+      for (let k in reply.content.addresses) {
+        hosts.push({server_id: reply.content.addresses[k].id, port: reply.content.addresses[k].port, address: reply.content.addresses[k].address})
+      }
+      let view: View = new View(reply.content.id, reply.content.processes, reply.content.f, hosts);
       console.log("Reconf Message ", reply);
+      this.reconfigureTo(reply.content);
       return;
     }
 

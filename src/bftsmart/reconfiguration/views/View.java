@@ -80,6 +80,10 @@ public class View implements Serializable {
  		return processes;
  	}
 
+	public Map<Integer,InetSocketAddress> getAddresses() {
+		return addresses;
+	}
+
  	@Override
  	public String toString(){
  		String ret = "ID:"+id+"; F:"+f+"; Processes:";

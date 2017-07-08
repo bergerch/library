@@ -1,7 +1,7 @@
 package bftsmart.communication.client.netty;
 
 import bftsmart.communication.client.CommunicationSystemServerSide;
-import bftsmart.reconfiguration.View;
+import bftsmart.reconfiguration.views.View;
 import bftsmart.tom.core.messages.TOMMessage;
 import bftsmart.tom.core.messages.TOMMessageType;
 import bftsmart.tom.util.TOMUtil;
@@ -53,35 +53,54 @@ public class WebSocketHandler extends ChannelInboundHandlerAdapter {
         int type = sm.getReqType().toInt();
         String content = "";
 
+        System.out.println("VIEW ID " + sm.getViewID());
+
 
         System.out.println("View change response: " + sm.view_change_response);
         if(sm.view_change_response) {
             Object obj = TOMUtil.getObject(sm.getContent());
-            if(obj instanceof View) {
+            System.out.println("View change response2");
+            //if(obj instanceof View) {
+                System.out.println("instanceof view");
                 JSONObject viewJSON = new JSONObject();
                 viewJSON.put("id", new Integer(((View) obj).getId()));
                 viewJSON.put("f", new Integer(((View) obj).getF()));
-                viewJSON.put("processes", ((View) obj).getProcesses());
+
+                int[] processes = ((View) obj).getProcesses();
+                JSONArray processesJson = new JSONArray();
+                for ( int k = 0; k < processes.length; k++) {
+                    processesJson.add(new Integer(processes[k]));
+                }
+                viewJSON.put("processes", processesJson);
 
                 Map<Integer, InetSocketAddress> map = ((View) obj).getAddresses();
 
 
-               //JSON Array ==
-                for( Map.Entry e: map.entrySet()) {
+               JSONArray jsonArray = new JSONArray();
+                for (Map.Entry e: map.entrySet()) {
 
                     Integer i = (Integer) e.getKey();
                     InetSocketAddress addr = (InetSocketAddress) e.getValue();
                     String address = addr.getHostName();
                     Integer port = new Integer(addr.getPort());
 
-                    JSONObject addEntry = new JSONObject();
-                   // addEntry.put()
-                    // TODO Tork in Progress
+                    JSONObject jsonValue = new JSONObject();
+                    jsonValue.put("address", address);
+                    jsonValue.put("port", port);
 
+                    JSONObject addEntry = new JSONObject();
+                    addEntry.put(i, jsonValue);
+
+                    jsonArray.add(addEntry);
+                    // }
                 }
 
-                viewJSON.put("addresses", ((View) obj).getAddresses());
-            }
+            viewJSON.put("addresses", jsonArray);
+
+            String jsonString = viewJSON.toJSONString();
+            System.out.println(jsonString);
+            content = content + jsonString;
+
         } else {
             // FIXME do not assume int
             byte[] reply = sm.getContent();
@@ -99,7 +118,7 @@ public class WebSocketHandler extends ChannelInboundHandlerAdapter {
         msg.put("session", new Integer(session));
         msg.put("sequence", new Integer(sequence));
         msg.put("operationId", new Integer(operationId));
-        msg.put("view", new Integer(view));
+        msg.put("viewId", new Integer(view));
         msg.put("type", new Integer(type));
         msg.put("content", content);
 
