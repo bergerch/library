@@ -3,6 +3,7 @@ import {View} from "./View";
 import {ViewStorage} from "./ViewStorage.interface";
 import {TOMConfiguration} from "../config/TOMConfiguration";
 import {DefaultViewStorage} from "./DefaultViewStorage";
+import {log} from "util";
 
 
 @Injectable()
@@ -15,6 +16,7 @@ export class ViewController {
   public constructor(procId: number, TOMConfiguration: TOMConfiguration) {
 
     this.currentView = new View(0, TOMConfiguration.initial_view, TOMConfiguration.f, TOMConfiguration.hosts);
+    this.viewStore = new DefaultViewStorage();
   }
 
   public getCurrentViewProcesses() {
@@ -44,14 +46,15 @@ export class ViewController {
   }
 
   public getCurrentViewF() {
-    return this.getCurrentView().getF();
+    return this.currentView.f;
   }
 
   public getCurrentViewN() {
-    return this.getCurrentView().getN();
+    return this.currentView.processes.length;
   }
 
   public setCurrentView(view: View) {
+    console.log('current View', view);
     this.lastView = this.currentView;
     this.currentView = view;
     this.viewStore.storeView(view);

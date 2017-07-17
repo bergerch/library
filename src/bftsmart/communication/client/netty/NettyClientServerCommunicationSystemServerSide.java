@@ -294,12 +294,14 @@ public class NettyClientServerCommunicationSystemServerSide extends SimpleChanne
 	public void send(int[] targets, TOMMessage sm, boolean serializeClassHeaders) {
 
 
+
 		ArrayList<WebClientServerSession> webClientReceivers = new ArrayList<>();
 		ArrayList<Integer> targetsNetty = new ArrayList<>();
 
 		for (int i = 0; i< targets.length; i++) {
 			if (webClientConnections.containsKey(new Integer(targets[i]))) {
 				webClientReceivers.add(webClientConnections.get(new Integer(targets[i])));
+				// System.out.println("Receiver: " + webClientConnections.get(new Integer(targets[i])).toString());
 			} else {
 				targetsNetty.add(new Integer(targets[i]));
 			}

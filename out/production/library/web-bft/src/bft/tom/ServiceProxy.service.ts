@@ -4,7 +4,7 @@
 import {Injectable} from '@angular/core';
 import {ReplyReceiver, TOMSender} from "./TOMSender.service";
 import {HashResponseController} from "./HashResponseController.controller";
-import {TOMConfiguration} from "../config/TOMConfiguration";
+import {Host, InternetAddress, TOMConfiguration} from "../config/TOMConfiguration";
 import {Comparator} from "./util/Comparator.interface";
 import {Extractor} from "bft/tom/util/Extractor.interface";
 import {ClientViewController} from "../reconfiguration/ClientViewController.controller";
@@ -76,22 +76,36 @@ export class ServiceProxy extends TOMSender implements ReplyReceiver {
     this.replies[lastReceived] = reply;
     let replyQuorum = this.getReplyQuorum();
 
-
-    console.log(reply);
-
     /* Handle Reconfiguration from reply */
 
-    let viewChange = reply.viewId > this.getViewController().getCurrentViewId() ? 1 : 0;
+    let currentViewId = this.getViewController().getCurrentViewId();
+    let viewChange = reply.viewId > currentViewId ? 1 : 0;
     for (let i in this.replies) {
       if (Number(i) !== lastReceived &&
-        this.replies[i].viewId === reply.viewId) {
+        this.replies[i].viewId === reply.viewId &&
+        reply.viewId > currentViewId) {
         viewChange++
       }
     }
 
     if (viewChange >= replyQuorum) {
+      reply.content = JSON.parse(reply.content);
+      let hosts: Host[] = [];
+
+      console.log('pre-hosts ', reply.content);
+      console.log('pre-hosts2 ', reply.content.addresses);
+
+      for (let k in reply.content.addresses) {
+        hosts.push({
+          server_id: reply.sender,
+          port: reply.content.addresses[k].inetaddress.port,
+          address: reply.content.addresses[k].inetaddress.address
+        })
+      }
+      console.log('hosts ', hosts);
+      let view: View = new View(reply.content.id, reply.content.processes, reply.content.f, hosts);
       console.log("Reconf Message ", reply);
-      this.reconfigureTo(reply.content);
+      this.reconfigureTo(view);
       return;
     }
 
@@ -101,14 +115,14 @@ export class ServiceProxy extends TOMSender implements ReplyReceiver {
 
     let sameContent = 1;
     for (let i in this.replies) {
-        if (Number(i) !== lastReceived &&
-          this.comparator.compare(this.replies[i].content, reply.content) &&
-          this.replies[i].viewId === reply.viewId &&
-          this.replies[i].operationId === reply.operationId &&
-          this.replies[i].sequence === reply.sequence) {
-            sameContent++;
-        }
+      if (Number(i) !== lastReceived &&
+        this.comparator.compare(this.replies[i].content, reply.content) &&
+        this.replies[i].viewId === reply.viewId &&
+        this.replies[i].operationId === reply.operationId &&
+        this.replies[i].sequence === reply.sequence) {
+        sameContent++;
       }
+    }
 
 
     // When response passes quorum,
@@ -195,8 +209,8 @@ export class ServiceProxy extends TOMSender implements ReplyReceiver {
 
 
   private reconfigureTo(view: View) {
-    console.log('RECONFIG!');
     this.getViewController().setCurrentView(view);
+    this.cs.updateConnections();
   }
 
 }

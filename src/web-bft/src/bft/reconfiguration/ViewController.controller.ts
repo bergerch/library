@@ -3,6 +3,7 @@ import {View} from "./View";
 import {ViewStorage} from "./ViewStorage.interface";
 import {TOMConfiguration} from "../config/TOMConfiguration";
 import {DefaultViewStorage} from "./DefaultViewStorage";
+import {log} from "util";
 
 
 @Injectable()
@@ -53,6 +54,7 @@ export class ViewController {
   }
 
   public setCurrentView(view: View) {
+    console.log('current View', view);
     this.lastView = this.currentView;
     this.currentView = view;
     this.viewStore.storeView(view);

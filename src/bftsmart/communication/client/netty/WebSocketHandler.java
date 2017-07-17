@@ -53,15 +53,10 @@ public class WebSocketHandler extends ChannelInboundHandlerAdapter {
         int type = sm.getReqType().toInt();
         String content = "";
 
-        System.out.println("VIEW ID " + sm.getViewID());
-
-
-        System.out.println("View change response: " + sm.view_change_response);
         if(sm.view_change_response) {
             Object obj = TOMUtil.getObject(sm.getContent());
-            System.out.println("View change response2");
+            System.out.println("View change response ");
             //if(obj instanceof View) {
-                System.out.println("instanceof view");
                 JSONObject viewJSON = new JSONObject();
                 viewJSON.put("id", new Integer(((View) obj).getId()));
                 viewJSON.put("f", new Integer(((View) obj).getF()));
@@ -86,10 +81,10 @@ public class WebSocketHandler extends ChannelInboundHandlerAdapter {
 
                     JSONObject jsonValue = new JSONObject();
                     jsonValue.put("address", address);
-                    jsonValue.put("port", port);
+                    jsonValue.put("port", port+5);
 
                     JSONObject addEntry = new JSONObject();
-                    addEntry.put(i, jsonValue);
+                    addEntry.put("inetaddress", jsonValue);
 
                     jsonArray.add(addEntry);
                     // }
@@ -107,7 +102,6 @@ public class WebSocketHandler extends ChannelInboundHandlerAdapter {
             try {
                 int newValue = new DataInputStream(new ByteArrayInputStream(reply)).readInt();
                 content = content + newValue;
-                //System.outprintln(newValue);
             } catch (IOException e) {
                 e.printStackTrace();
             }
@@ -124,8 +118,11 @@ public class WebSocketHandler extends ChannelInboundHandlerAdapter {
 
         String jsonMsg = msg.toJSONString();
 
+
+        System.out.println(" Client <--- Replica | TextWebSocketFrame Sent : " + jsonMsg);
+
         for (WebClientServerSession wcss: webClientReceivers) {
-            // System.out.println(" ---> Sending JSON to client " + jsonMsg);
+
             wcss.getCtx().writeAndFlush(new TextWebSocketFrame(jsonMsg));
         }
 
@@ -136,7 +133,7 @@ public class WebSocketHandler extends ChannelInboundHandlerAdapter {
 
         if (msg instanceof WebSocketFrame) {
            //  System.out.println("This is a WebSocket frame");
-            // System.out.println("Client Channel : " + ctx.channel());
+
             if (msg instanceof BinaryWebSocketFrame) {
                //  System.out.println("BinaryWebSocketFrame Received : ");
                //  System.out.println(((BinaryWebSocketFrame) msg).content());
@@ -144,7 +141,7 @@ public class WebSocketHandler extends ChannelInboundHandlerAdapter {
 
                 String jsonMsg = ((TextWebSocketFrame) msg).text();
 
-                // System.out.println(" <--- TextWebSocketFrame Received : " + jsonMsg);
+                System.out.println(" Client ---> Replica | TextWebSocketFrame Received : " + jsonMsg);
 
 
                 JSONParser parser = new JSONParser();

@@ -40,6 +40,12 @@ public class WebClientServerSession {
         return replicaId;
     }
 
+
+    @Override
+    public String toString() {
+        return "{ReplicaId: " + replicaId + ", Channel: " + ctx.name() + "}";
+    }
+
 }
 
 

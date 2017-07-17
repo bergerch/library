@@ -25,6 +25,7 @@ export class ServiceProxy extends TOMSender implements ReplyReceiver {
   replyServer: number;
   invokeUnorderedHashedTimeout: number = 10;
 
+  // TODO implement Queue for reply Listeners
   replyListener: ReplyListener; // app callback to execute on reply
 
   requestType: TOMMessageType;
@@ -78,10 +79,12 @@ export class ServiceProxy extends TOMSender implements ReplyReceiver {
 
     /* Handle Reconfiguration from reply */
 
-    let viewChange = reply.viewId > this.getViewController().getCurrentViewId() ? 1 : 0;
+    let currentViewId = this.getViewController().getCurrentViewId();
+    let viewChange = reply.viewId > currentViewId ? 1 : 0;
     for (let i in this.replies) {
       if (Number(i) !== lastReceived &&
-        this.replies[i].viewId === reply.viewId) {
+        this.replies[i].viewId === reply.viewId &&
+        reply.viewId > currentViewId) {
         viewChange++
       }
     }
@@ -89,19 +92,22 @@ export class ServiceProxy extends TOMSender implements ReplyReceiver {
     if (viewChange >= replyQuorum) {
       reply.content = JSON.parse(reply.content);
       let hosts: Host[] = [];
+
+      console.log('reply.content ', reply.content);
+
       for (let k in reply.content.addresses) {
         hosts.push({
-          server_id: reply.content.addresses[k].id,
-          port: reply.content.addresses[k].port,
-          address: reply.content.addresses[k].address
+          server_id: reply.sender,
+          port: reply.content.addresses[k].inetaddress.port,
+          address: reply.content.addresses[k].inetaddress.address
         })
       }
+      console.log('hosts ', hosts);
       let view: View = new View(reply.content.id, reply.content.processes, reply.content.f, hosts);
       console.log("Reconf Message ", reply);
       this.reconfigureTo(view);
       return;
     }
-
 
     /* Compare content with other replies,
      * compare same content for same viewId and same operationId */
@@ -116,7 +122,6 @@ export class ServiceProxy extends TOMSender implements ReplyReceiver {
         sameContent++;
       }
     }
-
 
     // When response passes quorum,
     // deliver it to application via replyListener

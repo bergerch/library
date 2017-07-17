@@ -15,11 +15,7 @@ limitations under the License.
 */
 package bftsmart.reconfiguration;
 
-import java.io.BufferedReader;
-import java.io.ByteArrayOutputStream;
-import java.io.FileReader;
-import java.io.IOException;
-import java.io.ObjectOutputStream;
+import java.io.*;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Scanner;
@@ -153,7 +149,7 @@ public class ViewManager {
         rec.close();
     }
 
-    public static void main(String[] args) {
+    public static void main(String[] args)  {
 
         ViewManager viewManager = null;
 
@@ -162,7 +158,40 @@ public class ViewManager {
         } else {
             viewManager = new ViewManager("");
         }
-        
+
+        BufferedReader in = new BufferedReader(new InputStreamReader(System.in));
+        String command = "";
+        try {
+            while (in.readLine() != null && !command.equals("exit")) {
+
+                command = in.readLine();
+                String cmd = "";
+                int arg = -1;
+                try {
+                    StringTokenizer token = new StringTokenizer(command);
+                    cmd = token.nextToken();
+                    arg = Integer.parseInt(token.nextToken());
+                } catch (Exception e) {
+                }
+
+                if (arg >= 0) {
+                    if (cmd.equals("add")) {
+
+                        int port = (arg * 10) + 11000;
+                        viewManager.addServer(arg, "127.0.0.1", port);
+                    } else if (cmd.equals("rem")) {
+                        viewManager.removeServer(arg);
+                    }
+
+                    viewManager.executeUpdates();
+                }
+
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+ /*
         Scanner scan = new Scanner(System.in);
         String str = null;
         do {
@@ -189,6 +218,9 @@ public class ViewManager {
             }
 
         } while (!str.equals("exit"));
+      */
+
+
         viewManager.close();
         System.exit(0);
     }
