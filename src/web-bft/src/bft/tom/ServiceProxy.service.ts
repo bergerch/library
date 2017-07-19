@@ -12,27 +12,23 @@ import {TOMMessageType} from "./messages/TOMMessageType";
 import {TOMMessage} from "./messages/TOMMessage";
 import {ReplyListener} from "../communication/ReplyListener.interface";
 import {View} from "../reconfiguration/View";
+import Queue = jasmine.Queue;
 
 
 @Injectable()
 export class ServiceProxy extends TOMSender implements ReplyReceiver {
 
-  reqId: number = -1;
+
   operationId: number = -1;
-  replyQuorum: number; // size of the reply quorum
-  receivedReplies: number = 0; // Number of received replies
+  reqId: number = 0;
+
   invokeTimeout: number = 40;
   replyServer: number;
   invokeUnorderedHashedTimeout: number = 10;
 
-  // TODO implement Queue for reply Listeners
-  replyListener: ReplyListener; // app callback to execute on reply
-
-  requestType: TOMMessageType;
-  replies: TOMMessage[] = []; // Replies from replicas are stored here
-  response: TOMMessage = null; // Reply delivered to the application
-
-  hashResponseController: HashResponseController;
+  replyListeners: Map<number, ReplyListener> = new Map();
+  replies: Map<number, TOMMessage[]> = new Map();
+  hashResponseControllers: Map<number, HashResponseController> = new Map();
 
   comparator: Comparator<any>;
   extractor: Extractor;
@@ -73,28 +69,38 @@ export class ServiceProxy extends TOMSender implements ReplyReceiver {
    */
   public replyReceived(reply: TOMMessage) {
 
-    let lastReceived = reply.sender;
-    this.replies[lastReceived] = reply;
-    let replyQuorum = this.getReplyQuorum();
+    // the replica id of the reply received and its operation id
+    let lastReceived: number = reply.sender;
+    let sequence: number = reply.sequence;
 
-    /* Handle Reconfiguration from reply */
+    // Save the reply in an array for the pending request with operationId
+    let replies: TOMMessage[] = this.replies.get(sequence);
+    if (!replies) {
+      replies = [];
+      this.replies.set(sequence, replies);
+    }
+    replies[lastReceived] = reply;
 
+    // Determine the current reply quorum
+    let replyQuorum: number = this.getReplyQuorum();
+
+    // Handle Reconfiguration from reply
     let currentViewId = this.getViewController().getCurrentViewId();
     let viewChange = reply.viewId > currentViewId ? 1 : 0;
-    for (let i in this.replies) {
+    for (let i in replies) {
       if (Number(i) !== lastReceived &&
-        this.replies[i].viewId === reply.viewId &&
+        replies[i].viewId === reply.viewId &&
         reply.viewId > currentViewId) {
         viewChange++
       }
     }
 
+    // When client received enough reconfig messages
     if (viewChange >= replyQuorum) {
       reply.content = JSON.parse(reply.content);
       let hosts: Host[] = [];
 
-      console.log('reply.content ', reply.content);
-
+      // Create new View and reconfigure to it
       for (let k in reply.content.addresses) {
         hosts.push({
           server_id: reply.sender,
@@ -102,35 +108,33 @@ export class ServiceProxy extends TOMSender implements ReplyReceiver {
           address: reply.content.addresses[k].inetaddress.address
         })
       }
-      console.log('hosts ', hosts);
+
+      console.log('Hosts ', hosts);
       let view: View = new View(reply.content.id, reply.content.processes, reply.content.f, hosts);
-      console.log("Reconf Message ", reply);
       this.reconfigureTo(view);
       return;
     }
 
-    /* Compare content with other replies,
-     * compare same content for same viewId and same operationId */
-
+    // Compare content with other replies, compare same content for same viewId and same operationId
     let sameContent = 1;
-    for (let i in this.replies) {
-      if (Number(i) !== lastReceived &&
-        this.comparator.compare(this.replies[i].content, reply.content) &&
-        this.replies[i].viewId === reply.viewId &&
-        this.replies[i].operationId === reply.operationId &&
-        this.replies[i].sequence === reply.sequence) {
+
+    for (let other of replies) {
+      if (other && other.sender !== reply.sender &&
+        this.comparator.compare(other.content, reply.content) &&
+        other.viewId === reply.viewId &&
+        other.operationId === reply.operationId &&
+        other.sequence === reply.sequence) {
         sameContent++;
       }
     }
 
-    // When response passes quorum,
-    // deliver it to application via replyListener
-
+    // When response passes quorum, deliver it to application via replyListener
     if (sameContent >= replyQuorum) {
-      this.response = this.extractor.extractResponse(this.replies, sameContent, lastReceived);
-      this.replies = [];
-      console.log('validated ', this.response);
-      this.replyListener.replyReceived(this.response);
+      let response = this.extractor.extractResponse(replies, sameContent, lastReceived);
+      console.log('validated ', response);
+      this.replies.delete(response.sequence);
+      this.replyListeners.get(response.sequence).replyReceived(response);
+      this.replyListeners.delete(response.sequence);
     }
 
   }
@@ -144,30 +148,40 @@ export class ServiceProxy extends TOMSender implements ReplyReceiver {
   }
 
   public invokeUnorderedHashed(request, replyListener?: ReplyListener): any {
-    return this.invoke(request, TOMMessageType.UNORDERED_HASHED_REQUEST, replyListener);
+    // TODO
+    throw new Error("not yet implemented")
+    //return this.invoke(request, TOMMessageType.UNORDERED_HASHED_REQUEST, replyListener);
   }
 
+
+  /**
+   * This method invokes a request to be send to all replicas to be executed.
+   * This method works asynchronous.
+   * @param request the request to be send
+   * @param reqType type of request e.g. ordered, unordered
+   * @param replyListener application defined callback, will be executed when response is obtained
+   */
   private invoke(request, reqType: number, replyListener?: ReplyListener): any {
 
-    // Clean all statefull data to prepare for receiving next replies
-    this.replies = [];
-    this.receivedReplies = 0;
-    this.response = null;
-    this.replyListener = replyListener;
-    this.replyQuorum = this.getReplyQuorum();
+    // Clear all statefull data to prepare for receiving next replies
 
-    // Send the request to the replicas, and get its ID
+
+    this.replyListeners.set(this.sequence, replyListener);
+
     this.reqId = this.generateRequestId(reqType);
+
     this.operationId = this.generateOperationId();
-    this.requestType = reqType;
+
+    if (!this.replies.get(this.sequence)) {
+      this.replies.set(this.sequence, []);
+    }
 
     this.replyServer = -1;
-    this.hashResponseController = null;
+    this.hashResponseControllers = null;
 
     if (reqType === TOMMessageType.UNORDERED_HASHED_REQUEST) {
 
       this.replyServer = this.getRandomlyServerId();
-
 
       let viewController: ClientViewController = this.getViewManager();
 
@@ -189,6 +203,10 @@ export class ServiceProxy extends TOMSender implements ReplyReceiver {
 
   }
 
+  /**
+   * Computes the reply quorum, depends on f and n
+   * @returns {number}
+   */
   private getReplyQuorum(): number {
     let n: number = this.getViewController().getCurrentViewF();
     let f: number = this.getViewController().getCurrentViewN();
@@ -198,6 +216,10 @@ export class ServiceProxy extends TOMSender implements ReplyReceiver {
     return replyQuorum;
   }
 
+  /**
+   * Selects randomly a server id
+   * @returns {number}
+   */
   private getRandomlyServerId(): number {
     let numServers: number = this.getViewController().getCurrentViewProcesses().length;
     let pos = Math.floor(Math.random() * numServers);
@@ -206,6 +228,10 @@ export class ServiceProxy extends TOMSender implements ReplyReceiver {
   }
 
 
+  /**
+   * Reconfigures to a nw view
+   * @param view
+   */
   private reconfigureTo(view: View) {
     this.getViewController().setCurrentView(view);
     this.cs.updateConnections();

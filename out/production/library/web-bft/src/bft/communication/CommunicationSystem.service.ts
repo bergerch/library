@@ -122,6 +122,7 @@ export class CommunicationSystem implements ICommunicationSystem {
       console.log('#### RECONFIG: Removed replica ', key);
     });
 
+
     // Establish and add new connections
     connectionsToAdd.forEach((value: InternetAddress, key: number) => {
       let address: string = 'ws://' + value.address + ':' + value.port;
