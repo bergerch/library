@@ -51,7 +51,12 @@ export class AppComponent implements OnInit, ReplyListener {
     this.counterSubscription = this.counter.subscribe((num) => {
       this.countChange.emit(this.counterValue);
       this.sentMessage = "" + this.counterValue;
-      this.counterProxy.invokeOrdered(this.counterValue, this);
+      if (this.counterValue === 0) {
+        this.counterProxy.invokeUnordered(this.counterValue, this)
+      } else {
+        this.counterProxy.invokeOrdered(this.counterValue, this);
+      }
+
     });
 
 
