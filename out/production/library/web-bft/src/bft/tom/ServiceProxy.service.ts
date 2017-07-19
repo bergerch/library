@@ -28,7 +28,7 @@ export class ServiceProxy extends TOMSender implements ReplyReceiver {
 
   replyListeners: Map<number, ReplyListener> = new Map();
   replies: Map<number, TOMMessage[]> = new Map();
-  hashResponseControllers: Map<number,HashResponseController> = new Map();
+  hashResponseControllers: Map<number, HashResponseController> = new Map();
 
   comparator: Comparator<any>;
   extractor: Extractor;
@@ -71,10 +71,14 @@ export class ServiceProxy extends TOMSender implements ReplyReceiver {
 
     // the replica id of the reply received and its operation id
     let lastReceived: number = reply.sender;
-    let operationId: number = reply.operationId;
+    let sequence: number = reply.sequence;
 
     // Save the reply in an array for the pending request with operationId
-    let replies: TOMMessage[] = this.replies.get(operationId);
+    let replies: TOMMessage[] = this.replies.get(sequence);
+    if (!replies) {
+      replies = [];
+      this.replies.set(sequence, replies);
+    }
     replies[lastReceived] = reply;
 
     // Determine the current reply quorum
@@ -91,12 +95,10 @@ export class ServiceProxy extends TOMSender implements ReplyReceiver {
       }
     }
 
-    // When client received enough
+    // When client received enough reconfig messages
     if (viewChange >= replyQuorum) {
       reply.content = JSON.parse(reply.content);
       let hosts: Host[] = [];
-
-      console.log('reply.content ', reply.content);
 
       // Create new View and reconfigure to it
       for (let k in reply.content.addresses) {
@@ -107,7 +109,7 @@ export class ServiceProxy extends TOMSender implements ReplyReceiver {
         })
       }
 
-      console.log('hosts ', hosts);
+      console.log('Hosts ', hosts);
       let view: View = new View(reply.content.id, reply.content.processes, reply.content.f, hosts);
       this.reconfigureTo(view);
       return;
@@ -115,12 +117,13 @@ export class ServiceProxy extends TOMSender implements ReplyReceiver {
 
     // Compare content with other replies, compare same content for same viewId and same operationId
     let sameContent = 1;
-    for (let i in replies) {
-      if (Number(i) !== lastReceived &&
-        this.comparator.compare(replies[i].content, reply.content) &&
-        replies[i].viewId === reply.viewId &&
-        replies[i].operationId === reply.operationId &&
-        replies[i].sequence === reply.sequence) {
+
+    for (let other of replies) {
+      if (other && other.sender !== reply.sender &&
+        this.comparator.compare(other.content, reply.content) &&
+        other.viewId === reply.viewId &&
+        other.operationId === reply.operationId &&
+        other.sequence === reply.sequence) {
         sameContent++;
       }
     }
@@ -129,9 +132,9 @@ export class ServiceProxy extends TOMSender implements ReplyReceiver {
     if (sameContent >= replyQuorum) {
       let response = this.extractor.extractResponse(replies, sameContent, lastReceived);
       console.log('validated ', response);
-      this.replies.delete(response.operationId);
-      this.replyListeners.get(response.operationId).replyReceived(response);
-      this.replyListeners.delete(response.operationId);
+      this.replies.delete(response.sequence);
+      this.replyListeners.get(response.sequence).replyReceived(response);
+      this.replyListeners.delete(response.sequence);
     }
 
   }
@@ -163,15 +166,15 @@ export class ServiceProxy extends TOMSender implements ReplyReceiver {
     // Clear all statefull data to prepare for receiving next replies
 
 
+    this.replyListeners.set(this.sequence, replyListener);
+
     this.reqId = this.generateRequestId(reqType);
 
     this.operationId = this.generateOperationId();
 
-    if (!this.replies.get(this.operationId)) {
-      this.replies.set(this.operationId, []);
+    if (!this.replies.get(this.sequence)) {
+      this.replies.set(this.sequence, []);
     }
-
-    this.replyListeners.set(this.operationId, replyListener);
 
     this.replyServer = -1;
     this.hashResponseControllers = null;
@@ -200,6 +203,10 @@ export class ServiceProxy extends TOMSender implements ReplyReceiver {
 
   }
 
+  /**
+   * Computes the reply quorum, depends on f and n
+   * @returns {number}
+   */
   private getReplyQuorum(): number {
     let n: number = this.getViewController().getCurrentViewF();
     let f: number = this.getViewController().getCurrentViewN();
@@ -209,6 +216,10 @@ export class ServiceProxy extends TOMSender implements ReplyReceiver {
     return replyQuorum;
   }
 
+  /**
+   * Selects randomly a server id
+   * @returns {number}
+   */
   private getRandomlyServerId(): number {
     let numServers: number = this.getViewController().getCurrentViewProcesses().length;
     let pos = Math.floor(Math.random() * numServers);
@@ -217,6 +228,10 @@ export class ServiceProxy extends TOMSender implements ReplyReceiver {
   }
 
 
+  /**
+   * Reconfigures to a nw view
+   * @param view
+   */
   private reconfigureTo(view: View) {
     this.getViewController().setCurrentView(view);
     this.cs.updateConnections();
