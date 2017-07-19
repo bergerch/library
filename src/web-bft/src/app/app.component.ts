@@ -17,16 +17,16 @@ export class AppComponent implements OnInit, ReplyListener {
   @Output() countChange = new EventEmitter<number>();
 
   title = 'Web-BFT Demo!';
+  color = 'accent';
 
-  socket: Subject<any>;
   counterSubscription: Subscription;
+
   message: string;
   sentMessage: string;
+
   counterValue: number = 0;
-  iterations: number = 1000;
   counter: Observable<any>;
-  color = 'accent';
-  reply: any;
+
 
   constructor(websocketService: WebsocketService, private counterProxy: ServiceProxy) {
   }
@@ -51,7 +51,7 @@ export class AppComponent implements OnInit, ReplyListener {
     this.counterSubscription = this.counter.subscribe((num) => {
       this.countChange.emit(this.counterValue);
       this.sentMessage = "" + this.counterValue;
-      this.reply = this.counterProxy.invokeOrdered(this.counterValue, this);
+      this.counterProxy.invokeOrdered(this.counterValue, this);
     });
 
 
