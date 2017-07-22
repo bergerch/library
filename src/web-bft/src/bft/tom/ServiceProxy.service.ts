@@ -165,10 +165,9 @@ export class ServiceProxy extends TOMSender implements ReplyReceiver {
 
     // Clear all statefull data to prepare for receiving next replies
 
-
-    this.replyListeners.set(this.sequence, replyListener);
-
     this.reqId = this.generateRequestId(reqType);
+
+    this.replyListeners.set(this.reqId, replyListener);
 
     this.operationId = this.generateOperationId();
 
