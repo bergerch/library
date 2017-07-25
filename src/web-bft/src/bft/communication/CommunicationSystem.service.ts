@@ -11,7 +11,8 @@ import {WebsocketService} from "./Websocket.service";
 import {Subject} from "rxjs/Subject";
 import {View} from "../reconfiguration/View";
 import {InternetAddress} from "../config/TOMConfiguration";
-import {ReplyListener} from "./ReplyListener.interface";
+import * as CryptoJS from "../../../node_modules/crypto-js/crypto-js.js";
+
 
 export interface ICommunicationSystem {
 
@@ -52,6 +53,9 @@ export class CommunicationSystem implements ICommunicationSystem {
       let connection: ReplicaConnection = new ReplicaConnection(socket, null, null, key);
       this.sessionTable.set(key, connection);
     });
+
+    // Test purpose, test HMAC generation
+    console.log(CryptoJS.enc.Hex.stringify(CryptoJS.HmacSHA1('Message', 'Key')));
   }
 
   public send(sign: boolean, targets: number[], sm: TOMMessage, replyReceiver?: ReplyReceiver) {
