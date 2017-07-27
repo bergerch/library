@@ -8,18 +8,21 @@ import {Mac} from "./util/Mac";
 @Injectable()
 export class ReplicaConnection {
 
+
   socket: Subject<any>;
   macSend: Mac;
   macReceive: Mac;
   replicaId: number;
+  secret: string;
 
 
-  public constructor(socket: Subject<any>, macSend: Mac, macReceive: Mac, replicaId) {
+  public constructor(socket: Subject<any>, macSend: Mac, macReceive: Mac, replicaId, secret?: string) {
 
     this.socket = socket;
     this.macSend = macSend;
     this.macReceive = macReceive;
     this.replicaId = replicaId;
+    this.secret = secret;
 
   }
 
@@ -41,6 +44,14 @@ export class ReplicaConnection {
     return this.replicaId;
   }
 
+
+ public getSecret(): string {
+    return this.secret;
+  }
+
+  public setSecret(value: string) {
+    this.secret = value;
+  }
 }
 
 

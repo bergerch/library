@@ -51,7 +51,7 @@ export abstract class TOMSender implements Closeable {
 
     this.viewController = new ClientViewController(this.me, this.TOMConfiguration);
     this.me = Math.round(Math.random() * 100000);
-    this.cs = new CommunicationSystem(this.me, this.viewController);
+    this.cs = new CommunicationSystem(this.me, this.viewController, TOMConfiguration);
 
   }
 

@@ -10,7 +10,7 @@ import {ReplicaConnection} from "./ReplicaConnection";
 import {WebsocketService} from "./Websocket.service";
 import {Subject} from "rxjs/Subject";
 import {View} from "../reconfiguration/View";
-import {InternetAddress} from "../config/TOMConfiguration";
+import {InternetAddress, TOMConfiguration} from "../config/TOMConfiguration";
 import * as CryptoJS from "../../../node_modules/crypto-js/crypto-js.js";
 
 
@@ -40,7 +40,7 @@ export class CommunicationSystem implements ICommunicationSystem {
   protected websocketService: WebsocketService;
 
 
-  public constructor(clientId: number, viewController: ClientViewController) {
+  public constructor(clientId: number, viewController: ClientViewController, private TOMConfiguration: TOMConfiguration) {
     this.websocketService = new WebsocketService();
     this.clientViewController = viewController;
 
@@ -50,12 +50,12 @@ export class CommunicationSystem implements ICommunicationSystem {
 
       let address: string = 'ws://' + value.address + ':' + value.port;
       let socket: Subject<any> = this.websocketService.createWebsocket(address);
-      let connection: ReplicaConnection = new ReplicaConnection(socket, null, null, key);
+      let password = '' + clientId + ':' + key;
+      let connection: ReplicaConnection = new ReplicaConnection(socket, null, null, key, password);
       this.sessionTable.set(key, connection);
     });
 
-    // Test purpose, test HMAC generation
-    console.log(CryptoJS.enc.Hex.stringify(CryptoJS.HmacSHA1('Message', 'Key')));
+
   }
 
   public send(sign: boolean, targets: number[], sm: TOMMessage, replyReceiver?: ReplyReceiver) {
@@ -63,13 +63,36 @@ export class CommunicationSystem implements ICommunicationSystem {
     // Subscribe: When reply is received, parse JSON and execute replyListener
     this.sessionTable.forEach((connection: ReplicaConnection, replicaId: number) => {
       connection.getSocket().subscribe((reply) => {
-        replyReceiver.replyReceived(JSON.parse(reply.data));
+
+        let msgReceived = JSON.parse(reply.data);
+        console.log('RECEIVED HMAC ', msgReceived.hmac);
+
+        // TODO CHECK FOR CORRECT HMAC BEFORE DELIVERING IT TO SERVICEPROXY
+        replyReceiver.replyReceived(msgReceived.data);
       });
     });
 
     // Send Message to all replicas
     this.sessionTable.forEach((connection: ReplicaConnection, replicaId: number) => {
-      connection.getSocket().next(sm);
+
+      // Creates MAC
+      let hmac = '';
+      if (this.TOMConfiguration.useMACs) {
+
+        let secret: string = connection.getSecret();
+        let message: string = JSON.stringify(sm);
+
+        console.log('MESSAGE ', message);
+
+        hmac = CryptoJS.enc.Hex.stringify(CryptoJS.HmacSHA1(message, secret));
+
+        console.log(secret);
+        console.log(hmac);
+      }
+
+      let message = {data: sm, hmac: hmac};
+      console.log('send messsage + hmac', message);
+      connection.getSocket().next(message);
     });
 
     console.log('send ', sm);

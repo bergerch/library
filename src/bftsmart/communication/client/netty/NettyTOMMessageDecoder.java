@@ -178,10 +178,10 @@ public class NettyTOMMessageDecoder extends ByteToMessageDecoder {
                     rl.readLock().unlock();
                     
                     SecretKeyFactory fac = SecretKeyFactory.getInstance("PBEWithMD5AndDES");
-                    String str = sm.getSender() + ":" + this.controller.getStaticConf().getProcessId();                                        
+                    String str = sm.getSender() + ":" + this.controller.getStaticConf().getProcessId();
                     PBEKeySpec spec = new PBEKeySpec(str.toCharArray());
                     SecretKey authKey = fac.generateSecret(spec);
-            
+
                     Mac macSend = Mac.getInstance(controller.getStaticConf().getHmacAlgorithm());
                     macSend.init(authKey);
                     Mac macReceive = Mac.getInstance(controller.getStaticConf().getHmacAlgorithm());

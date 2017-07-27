@@ -31,6 +31,12 @@ import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 
+import javax.crypto.Mac;
+import javax.crypto.SecretKey;
+import javax.crypto.SecretKeyFactory;
+import javax.crypto.spec.PBEKeySpec;
+import javax.xml.bind.DatatypeConverter;
+
 
 public class WebSocketHandler extends ChannelInboundHandlerAdapter {
 
@@ -107,14 +113,22 @@ public class WebSocketHandler extends ChannelInboundHandlerAdapter {
             }
         }
 
+        JSONObject data = new JSONObject();
+        data.put("sender", new Integer(sender));
+        data.put("session", new Integer(session));
+        data.put("sequence", new Integer(sequence));
+        data.put("operationId", new Integer(operationId));
+        data.put("viewId", new Integer(view));
+        data.put("type", new Integer(type));
+        data.put("content", content);
+
+
+        // TODO Generate a HMAC
+        String hmac = "TEST TROLOLLOLO";
+
         JSONObject msg = new JSONObject();
-        msg.put("sender", new Integer(sender));
-        msg.put("session", new Integer(session));
-        msg.put("sequence", new Integer(sequence));
-        msg.put("operationId", new Integer(operationId));
-        msg.put("viewId", new Integer(view));
-        msg.put("type", new Integer(type));
-        msg.put("content", content);
+        msg.put("data", data);
+        msg.put("hmac", hmac);
 
         String jsonMsg = msg.toJSONString();
 
@@ -152,7 +166,14 @@ public class WebSocketHandler extends ChannelInboundHandlerAdapter {
 
                     JSONObject jsonObject = (JSONObject) obj;
 
-                    int sender = ((Long) jsonObject.get("sender")).intValue();
+                    JSONObject data = (JSONObject) jsonObject.get("data");
+                    System.out.println(data + " " + data.toJSONString());
+                    String hmac = (String) jsonObject.get("hmac");
+
+                    System.out.println("HMAC Received " + hmac);
+
+
+                    int sender = ((Long) data.get("sender")).intValue();
 
                     WebClientServerSession wcss = new WebClientServerSession(ctx,
                             ((NettyClientServerCommunicationSystemServerSide) communicationSystemServer).getController().
@@ -165,26 +186,53 @@ public class WebSocketHandler extends ChannelInboundHandlerAdapter {
                         webClients.put(new Integer(sender), wcss);
                     }
 
-                    int session = ((Long) jsonObject.get("session")).intValue();
-                    int sequence = ((Long) jsonObject.get("sequence")).intValue();
-                    int operationId = ((Long) jsonObject.get("operationId")).intValue();
-                    int view = ((Long) jsonObject.get("viewId")).intValue();
-                    TOMMessageType type = TOMMessageType.fromInt(((Long) jsonObject.get("type")).intValue());
+                    int session = ((Long) data.get("session")).intValue();
+                    int sequence = ((Long) data.get("sequence")).intValue();
+                    int operationId = ((Long) data.get("operationId")).intValue();
+                    int view = ((Long) data.get("viewId")).intValue();
+                    TOMMessageType type = TOMMessageType.fromInt(((Long) data.get("type")).intValue());
                     byte[] content = new byte[1];
 
                     try {
 
-                        JSONObject contentObject = (JSONObject) jsonObject.get("content");
+                        JSONObject contentObject = (JSONObject) data.get("content");
                         content = contentObject.toJSONString().getBytes("utf-8");
 
                     } catch(ClassCastException e) {
 
                         ByteBuffer b = ByteBuffer.allocate(4);
-                        int contentInt = Integer.parseInt(jsonObject.get("content").toString());
+                        int contentInt = Integer.parseInt(data.get("content").toString());
                         b.putInt(contentInt);
                         content = b.array();
 
                     } finally {
+
+
+                        //TODO Compute HMAC and Compare
+                        SecretKeyFactory fac = SecretKeyFactory.getInstance("PBEWithMD5AndDES");
+                        String str = sender + ":" +  ((NettyClientServerCommunicationSystemServerSide) communicationSystemServer).getController().getStaticConf().getProcessId();
+                        PBEKeySpec spec = new PBEKeySpec(str.toCharArray());
+                        SecretKey authKey = fac.generateSecret(spec);
+
+                        Mac macReceive = Mac.getInstance(((NettyClientServerCommunicationSystemServerSide) communicationSystemServer).getController().getStaticConf().getHmacAlgorithm());
+
+                        System.out.println("AUTH KEY " + new String(authKey.getEncoded()));
+                        macReceive.init(authKey);
+
+                        String dataString = jsonMsg.replace("{\"data\":", "");
+
+                        System.out.println("DATA STRING" + dataString);
+
+                        String[] words = dataString.split(",\"hmac");
+                        dataString = words[0];
+
+                        System.out.println("DATA STRING2" + dataString);
+
+                        byte[] hmacComputedBytes = macReceive.doFinal(dataString.getBytes());
+
+                        String hmacHex = DatatypeConverter.printHexBinary(hmacComputedBytes);
+                        hmacHex = hmacHex.toLowerCase();
+                        System.out.println("HMAC COMPUTED " + hmacHex);
 
                         TOMMessage sm = new TOMMessage(sender, session, sequence, operationId, content, view, type);
                         sm.serializedMessage = TOMMessage.messageToBytes(sm);

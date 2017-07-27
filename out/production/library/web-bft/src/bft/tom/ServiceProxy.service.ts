@@ -133,8 +133,6 @@ export class ServiceProxy extends TOMSender implements ReplyReceiver {
       let response = this.extractor.extractResponse(replies, sameContent, lastReceived);
       console.log('validated ', response);
       this.replies.delete(response.sequence);
-      console.log('response ', response);
-      console.log('REPLY LISTENER ', this.replyListeners.get(response.sequence));
       this.replyListeners.get(response.sequence).replyReceived(response);
       this.replyListeners.delete(response.sequence);
     }
@@ -166,7 +164,6 @@ export class ServiceProxy extends TOMSender implements ReplyReceiver {
   private invoke(request, reqType: number, replyListener?: ReplyListener): any {
 
     // Clear all statefull data to prepare for receiving next replies
-
 
     this.reqId = this.generateRequestId(reqType);
 

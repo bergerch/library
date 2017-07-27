@@ -96,13 +96,13 @@ export class TOMConfiguration {
   outQueueSize = 500000;
 
   // Set to 1 if SMaRt should use signatures, set to 0 if otherwise
-  useSignatures = 0;
+  useSignatures = false;
 
   // Set to 1 if SMaRt should use MAC's, set to 0 if otherwise
-  useMACs = 1;
+  useMACs = true;
 
   // Set to 1 if SMaRt should use the standard output to display debug messages, set to 0 if otherwise
-  debug = 0;
+  debug = false;
 
   // Print information about the replica when it is shutdown
   shutdownhook = true;

@@ -47,7 +47,7 @@ export class AppComponent implements OnInit, ReplyListener {
       this.counterSubscription.unsubscribe();
     }
 
-    this.counter = Observable.interval(25);
+    this.counter = Observable.interval(0);
     this.counterSubscription = this.counter.subscribe((num) => {
       this.countChange.emit(this.counterValue);
       this.sentMessage = "" + this.counterValue;
