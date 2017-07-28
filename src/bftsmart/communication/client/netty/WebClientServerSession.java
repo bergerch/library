@@ -6,11 +6,13 @@ public class WebClientServerSession {
 
     private ChannelHandlerContext ctx;
     private int replicaId;
+    private int clientId;
 
 
-    public WebClientServerSession(ChannelHandlerContext ctx, int replicaId) {
+    public WebClientServerSession(ChannelHandlerContext ctx, int replicaId, int clientId) {
         this.ctx = ctx;
         this.replicaId = replicaId;
+        this.clientId = clientId;
     }
 
 
@@ -40,6 +42,9 @@ public class WebClientServerSession {
         return replicaId;
     }
 
+    public int getClientId() {
+        return clientId;
+    }
 
     @Override
     public String toString() {

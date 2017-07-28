@@ -65,7 +65,29 @@ export class CommunicationSystem implements ICommunicationSystem {
       connection.getSocket().subscribe((reply) => {
 
         let msgReceived = JSON.parse(reply.data);
-        console.log('RECEIVED HMAC ', msgReceived.hmac);
+
+
+        if (this.TOMConfiguration.useMACs) {
+
+          let hmacReceived = msgReceived.hmac;
+          console.log('RECEIVED HMAC ', hmacReceived);
+          let secret: string = connection.getSecret();
+          let data: string = JSON.stringify(msgReceived.data);
+
+          console.log('DATA ', data);
+
+          let hmacComputed = CryptoJS.enc.Hex.stringify(CryptoJS.HmacSHA1(data, secret));
+
+          console.log('COMPUTED HMAC ', hmacComputed);
+
+          if (hmacComputed == hmacReceived) {
+            console.log(hmacComputed + ' === ' + hmacReceived);
+          } else {
+            console.log(hmacComputed + ' =/= ' + hmacReceived);
+            // Do NOT deliver message to ServiceProxy when MAC is invalid
+            return;
+          }
+        }
 
         // TODO CHECK FOR CORRECT HMAC BEFORE DELIVERING IT TO SERVICEPROXY
         replyReceiver.replyReceived(msgReceived.data);
