@@ -62,34 +62,7 @@ export class CommunicationSystem implements ICommunicationSystem {
 
     // Subscribe: When reply is received, parse JSON and execute replyListener
     this.sessionTable.forEach((connection: ReplicaConnection, replicaId: number) => {
-      connection.getSocket().subscribe((reply) => {
-
-        let msgReceived = JSON.parse(reply.data);
-
-        if (this.TOMConfiguration.useMACs) {
-
-          let hmacReceived = msgReceived.hmac;
-          console.log('RECEIVED HMAC ', hmacReceived);
-          let secret: string = connection.getSecret();
-          let data: string = JSON.stringify(msgReceived.data);
-
-          console.log('DATA ', data);
-
-          let hmacComputed = CryptoJS.enc.Hex.stringify(CryptoJS.HmacSHA1(data, secret));
-
-          console.log('COMPUTED HMAC ', hmacComputed);
-
-          if (hmacComputed == hmacReceived) {
-            console.log(hmacComputed + ' === ' + hmacReceived);
-          } else {
-            console.log(hmacComputed + ' =/= ' + hmacReceived);
-            // Do NOT deliver message to ServiceProxy when MAC is invalid
-            return;
-          }
-        }
-
-        replyReceiver.replyReceived(msgReceived.data);
-      });
+      connection.getSocket().subscribe( (reply) => this.receive(reply, replyReceiver, connection));
     });
 
     // Send Message to all replicas
@@ -117,6 +90,38 @@ export class CommunicationSystem implements ICommunicationSystem {
 
     console.log('send ', sm);
   }
+
+  private receive(reply, replyReceiver: ReplyReceiver, connection: ReplicaConnection) {
+
+      let msgReceived = JSON.parse(reply.data);
+
+      // Compute and compare hmacs
+      if (this.TOMConfiguration.useMACs) {
+
+        let hmacReceived = msgReceived.hmac;
+        console.log('RECEIVED HMAC ', hmacReceived);
+        let secret: string = connection.getSecret();
+        let data: string = JSON.stringify(msgReceived.data);
+
+        console.log('DATA ', data);
+
+        let hmacComputed = CryptoJS.enc.Hex.stringify(CryptoJS.HmacSHA1(data, secret));
+
+        console.log('COMPUTED HMAC ', hmacComputed);
+
+        if (hmacComputed == hmacReceived) {
+          console.log(hmacComputed + ' === ' + hmacReceived);
+        } else {
+          console.log(hmacComputed + ' =/= ' + hmacReceived);
+          // Do NOT deliver message to ServiceProxy when MAC is invalid
+          return;
+        }
+      }
+
+      replyReceiver.replyReceived(msgReceived.data);
+
+  }
+
 
   public setReplyReceiver(replyReceiver: ReplyReceiver) {
     this.replyReceiver = replyReceiver;
