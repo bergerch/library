@@ -2,17 +2,39 @@ package bftsmart.communication.client.netty;
 
 import io.netty.channel.ChannelHandlerContext;
 
+import javax.crypto.Mac;
+
 public class WebClientServerSession {
 
     private ChannelHandlerContext ctx;
     private int replicaId;
     private int clientId;
+    private Mac macReceived;
+    private Mac macSend;
 
 
     public WebClientServerSession(ChannelHandlerContext ctx, int replicaId, int clientId) {
         this.ctx = ctx;
         this.replicaId = replicaId;
         this.clientId = clientId;
+    }
+
+
+    public void setMacReceived(Mac macReceived) {
+        this.macReceived = macReceived;
+    }
+
+    public void setMacSend(Mac macSend) {
+        this.macSend = macSend;
+    }
+
+    public Mac getMacReceived() {
+
+        return macReceived;
+    }
+
+    public Mac getMacSend() {
+        return macSend;
     }
 
 
@@ -30,6 +52,8 @@ public class WebClientServerSession {
         if (replicaId != that.replicaId) return false;
         return ctx != null ? ctx.equals(that.ctx) : that.ctx == null;
     }
+
+
 
     @Override
     public int hashCode() {

@@ -57,6 +57,7 @@ public class WebSocketHandler extends ChannelInboundHandlerAdapter {
 
     public void send(ArrayList<WebClientServerSession> webClientReceivers, TOMMessage sm) {
 
+        // Initialize TOM message fields
         int sender = sm.getSender();
         int session = sm.getSession();
         int sequence = sm.getSequence();
@@ -65,15 +66,18 @@ public class WebSocketHandler extends ChannelInboundHandlerAdapter {
         int type = sm.getReqType().toInt();
         String content = "";
 
-        // Create Reconfiguration message if clients view number was not up to date
+        // IF it's a >>>Reconfiguration message<<< (clients view number was not up to date) create message with new VIEW
         if (sm.view_change_response) {
-            Object obj = TOMUtil.getObject(sm.getContent());
-            System.out.println("View change response ");
+            System.out.println(">>>VIEW CHANGE RESPONSE<<<");
 
+            Object obj = TOMUtil.getObject(sm.getContent());
             JSONObject viewJSON = new JSONObject();
+
+            // Set new view id and f for client to reconfigure to
             viewJSON.put("id", new Integer(((View) obj).getId()));
             viewJSON.put("f", new Integer(((View) obj).getF()));
 
+            // Set the processed array with proc ids
             int[] processes = ((View) obj).getProcesses();
             JSONArray processesJson = new JSONArray();
             for (int k = 0; k < processes.length; k++) {
@@ -81,9 +85,8 @@ public class WebSocketHandler extends ChannelInboundHandlerAdapter {
             }
             viewJSON.put("processes", processesJson);
 
+            // Create the addresses array containing the replica set
             Map<Integer, InetSocketAddress> map = ((View) obj).getAddresses();
-
-
             JSONArray jsonArray = new JSONArray();
             for (Map.Entry e : map.entrySet()) {
 
@@ -106,7 +109,6 @@ public class WebSocketHandler extends ChannelInboundHandlerAdapter {
             viewJSON.put("addresses", jsonArray);
 
             String jsonString = viewJSON.toJSONString();
-            System.out.println(jsonString);
             content = content + jsonString;
 
         } else {
@@ -131,6 +133,7 @@ public class WebSocketHandler extends ChannelInboundHandlerAdapter {
         data.put("content", content);
 
 
+        // For each client receiver, attach mac or signature (if used), then send message
         for (WebClientServerSession clientSession : webClientReceivers) {
 
             // Generate and attach MAC to message
@@ -140,22 +143,26 @@ public class WebSocketHandler extends ChannelInboundHandlerAdapter {
 
                 try {
 
-                    // TODO Performance Optimization (Save Mac object in Map)
-                    SecretKeyFactory fac = SecretKeyFactory.getInstance("PBEWithMD5AndDES");
-                    String str = clientSession.getClientId() + ":" + config.getProcessId();
-                    PBEKeySpec spec = new PBEKeySpec(str.toCharArray());
-                    SecretKey authKey = fac.generateSecret(spec);
+                    // Performance optimization: Save Mac object in connection and reuse
+                    Mac macSend = clientSession.getMacSend();
 
-                    System.out.println("AUTH KEY " + new String(authKey.getEncoded()));
+                    if (macSend == null) {
+                        // Initialize Mac stuff
+                        SecretKeyFactory fac = SecretKeyFactory.getInstance("PBEWithMD5AndDES");
+                        String str = clientSession.getClientId() + ":" + config.getProcessId();
+                        PBEKeySpec spec = new PBEKeySpec(str.toCharArray());
+                        SecretKey authKey = fac.generateSecret(spec);
 
-                    Mac macSend = Mac.getInstance(config.getHmacAlgorithm());
-                    macSend.init(authKey);
+                        macSend = Mac.getInstance(config.getHmacAlgorithm());
+                        macSend.init(authKey);
+                        clientSession.setMacSend(macSend);
+                    }
+
+                    // Generate the HMAC for the data to be transmitted
                     String dataString = data.toJSONString();
-                    System.out.println("DATA STRING " + dataString);
                     byte[] hmacComputedBytes = macSend.doFinal(dataString.getBytes());
                     String hmacHexString = DatatypeConverter.printHexBinary(hmacComputedBytes);
                     hmac = hmacHexString.toLowerCase();
-                    System.out.println("MAC COMPUTED " + hmac);
 
                 } catch (NoSuchAlgorithmException e) {
                     e.printStackTrace();
@@ -167,6 +174,7 @@ public class WebSocketHandler extends ChannelInboundHandlerAdapter {
 
             }
 
+            // Create the JSON TOM Message and send it to the client
             JSONObject msg = new JSONObject();
             msg.put("data", data);
 
@@ -177,8 +185,6 @@ public class WebSocketHandler extends ChannelInboundHandlerAdapter {
             String jsonMsg = msg.toJSONString();
 
             System.out.println(" Client <--- Replica | TextWebSocketFrame Sent : " + jsonMsg);
-
-
 
             clientSession.getCtx().writeAndFlush(new TextWebSocketFrame(jsonMsg));
         }
@@ -206,10 +212,9 @@ public class WebSocketHandler extends ChannelInboundHandlerAdapter {
 
                     boolean useMacs = config.getUseMACs() == 1;
 
+                    // Parse message
                     Object obj = parser.parse(jsonMsg);
-
                     JSONObject jsonObject = (JSONObject) obj;
-
                     JSONObject data = (JSONObject) jsonObject.get("data");
 
                     String hmacReceived = "";
@@ -230,6 +235,7 @@ public class WebSocketHandler extends ChannelInboundHandlerAdapter {
                         webClients.put(new Integer(sender), wcss);
                     }
 
+                    // Initialize TOM message fields
                     int session = ((Long) data.get("session")).intValue();
                     int sequence = ((Long) data.get("sequence")).intValue();
                     int operationId = ((Long) data.get("operationId")).intValue();
@@ -237,6 +243,7 @@ public class WebSocketHandler extends ChannelInboundHandlerAdapter {
                     TOMMessageType type = TOMMessageType.fromInt(((Long) data.get("type")).intValue());
                     byte[] content = new byte[1];
 
+                    // Parse content
                     try {
 
                         JSONObject contentObject = (JSONObject) data.get("content");
@@ -254,34 +261,47 @@ public class WebSocketHandler extends ChannelInboundHandlerAdapter {
                         // Compute HMAC and Compare
                         if (useMacs) {
 
-                            // TODO Performance Optimization (Save Mac object in Map)
-                            SecretKeyFactory fac = SecretKeyFactory.getInstance("PBEWithMD5AndDES");
-                            String str = sender + ":" + config.getProcessId();
-                            PBEKeySpec spec = new PBEKeySpec(str.toCharArray());
-                            SecretKey authKey = fac.generateSecret(spec);
-                            Mac macReceive = Mac.getInstance(config.getHmacAlgorithm());
-                            macReceive.init(authKey);
+                            // Performance Optimization (Save Mac object in Map) and reuse
+                            HashMap<Integer, WebClientServerSession> connections = ((NettyClientServerCommunicationSystemServerSide) communicationSystemServer).getWebClientConnections();
+                            WebClientServerSession webConnection = connections.get(new Integer(sender));
+                            Mac macReceive = webConnection.getMacReceived();
+
+                            if (macReceive == null) {
+                                // Init Mac Stuff if not already done
+                                SecretKeyFactory fac = SecretKeyFactory.getInstance("PBEWithMD5AndDES");
+                                String str = sender + ":" + config.getProcessId();
+                                PBEKeySpec spec = new PBEKeySpec(str.toCharArray());
+                                SecretKey authKey = fac.generateSecret(spec);
+                                macReceive = Mac.getInstance(config.getHmacAlgorithm());
+                                macReceive.init(authKey);
+                                webConnection.setMacReceived(macReceive);
+
+                            }
+
+                            // Cuts off hmac and compute the data sequence of the received message
                             String dataString = jsonMsg.replace("{\"data\":", "");
                             String[] words = dataString.split(",\"hmac");
                             dataString = words[0];
+
+                            // Compute the hmac of this received data
                             byte[] hmacComputedBytes = macReceive.doFinal(dataString.getBytes());
                             String hmacComputed = DatatypeConverter.printHexBinary(hmacComputedBytes);
                             hmacComputed = hmacComputed.toLowerCase();
 
-                            if (hmacReceived.equals(hmacComputed)) {
-                                System.out.println(" === HMACS EQUAL: " + hmacReceived);
-                            } else { // HMACS not equal!
+                            // Compare hmac computed with hmac received
+                            if (!hmacReceived.equals(hmacComputed)) {
+
                                 System.out.println(" =/= HMACS NOT EQUAL");
                                 System.out.println("HMAC RECEIVED " + hmacReceived);
                                 System.out.println("HMAC COMPUTED " + hmacComputed);
 
-                                // Break out from method, do not deliver message to TOM Layer
+                                // !!! Break out from method, do not deliver message to TOM Layer
                                 return;
                             }
 
                         }
 
-                        // Create the TOM Message and deliver it to TOM Layer
+                        // Create the TOM Message and deliver it to TOM LAYER
                         TOMMessage sm = new TOMMessage(sender, session, sequence, operationId, content, view, type);
                         sm.serializedMessage = TOMMessage.messageToBytes(sm);
 

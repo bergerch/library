@@ -66,7 +66,6 @@ export class CommunicationSystem implements ICommunicationSystem {
 
         let msgReceived = JSON.parse(reply.data);
 
-
         if (this.TOMConfiguration.useMACs) {
 
           let hmacReceived = msgReceived.hmac;
@@ -89,7 +88,6 @@ export class CommunicationSystem implements ICommunicationSystem {
           }
         }
 
-        // TODO CHECK FOR CORRECT HMAC BEFORE DELIVERING IT TO SERVICEPROXY
         replyReceiver.replyReceived(msgReceived.data);
       });
     });
@@ -181,6 +179,5 @@ export class CommunicationSystem implements ICommunicationSystem {
       console.log('#### RECONFIG: Added replica ', key);
     });
   }
-
 
 }
