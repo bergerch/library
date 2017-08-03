@@ -1,0 +1,18 @@
+{
+  "name": "BFT Extension",
+  "description": "Connect to Byzantine Fault Tolerant Services",
+
+  "icons": { "16": "byzanz.png", "48": "byzanz.png", "128": "byzanz.png" },
+
+
+  "version": "0.1",
+  "permissions": [
+    "tabs", "http://*/*", "https://*/*"
+  ],
+  "browser_action": {
+      "default_title": "Connect to Byzantine Fault Tolerant Services",
+      "default_icon": "byzanz.png",
+      "default_popup": "popup.html"
+  },
+  "manifest_version": 2
+}
