@@ -29,6 +29,7 @@ export class AppComponent implements OnInit, ReplyListener {
 
 
   constructor(websocketService: WebsocketService, private counterProxy: ServiceProxy) {
+
   }
 
   ngOnInit() {
@@ -36,8 +37,8 @@ export class AppComponent implements OnInit, ReplyListener {
   }
 
   replyReceived(sm: TOMMessage) {
-    this.count = sm.content;
-    this.message = "" + sm.content;
+    this.count = parseInt(sm.content, 16);
+    this.message = "" + this.count;
   }
 
   launchCounter() {

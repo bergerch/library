@@ -6,9 +6,9 @@ import bftsmart.reconfiguration.views.View;
 import bftsmart.tom.core.messages.TOMMessage;
 import bftsmart.tom.core.messages.TOMMessageType;
 import bftsmart.tom.util.TOMUtil;
+
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
-import io.netty.handler.codec.http.FullHttpMessage;
 import io.netty.handler.codec.http.websocketx.BinaryWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.CloseWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.PingWebSocketFrame;
@@ -16,19 +16,14 @@ import io.netty.handler.codec.http.websocketx.PongWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.WebSocketFrame;
 
-
-import java.io.ByteArrayInputStream;
-import java.io.DataInputStream;
-import java.io.IOException;
-import java.io.UnsupportedEncodingException;
 import java.net.InetSocketAddress;
-import java.nio.ByteBuffer;
+
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.security.spec.InvalidKeySpecException;
+
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.Map;
 
 import org.json.simple.JSONArray;
@@ -39,13 +34,14 @@ import javax.crypto.Mac;
 import javax.crypto.SecretKey;
 import javax.crypto.SecretKeyFactory;
 import javax.crypto.spec.PBEKeySpec;
+
 import javax.xml.bind.DatatypeConverter;
 
 
 public class WebSocketHandler extends ChannelInboundHandlerAdapter {
 
-    CommunicationSystemServerSide communicationSystemServer;
-    TOMConfiguration config;
+    private CommunicationSystemServerSide communicationSystemServer;
+    private TOMConfiguration config;
 
     public WebSocketHandler(CommunicationSystemServerSide communicationSystemServer) {
         super();
@@ -112,14 +108,9 @@ public class WebSocketHandler extends ChannelInboundHandlerAdapter {
             content = content + jsonString;
 
         } else {
-            // FIXME do not assume int
+
             byte[] reply = sm.getContent();
-            try {
-                int newValue = new DataInputStream(new ByteArrayInputStream(reply)).readInt();
-                content = content + newValue;
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
+            content = DatatypeConverter.printHexBinary(reply);
         }
 
         // Create JSON TOM Message
@@ -244,74 +235,62 @@ public class WebSocketHandler extends ChannelInboundHandlerAdapter {
                     byte[] content = new byte[1];
 
                     // Parse content
-                    try {
+                    content = data.get("content").toString().getBytes();
 
-                        JSONObject contentObject = (JSONObject) data.get("content");
-                        content = contentObject.toJSONString().getBytes("utf-8");
+                    // Compute HMAC and Compare
+                    if (useMacs) {
 
-                    } catch (ClassCastException e) {
+                        // Performance Optimization (Save Mac object in Map) and reuse
+                        HashMap<Integer, WebClientServerSession> connections =
+                                ((NettyClientServerCommunicationSystemServerSide) communicationSystemServer).getWebClientConnections();
+                        WebClientServerSession webConnection = connections.get(new Integer(sender));
+                        Mac macReceive = webConnection.getMacReceived();
 
-                        ByteBuffer b = ByteBuffer.allocate(4);
-                        int contentInt = Integer.parseInt(data.get("content").toString());
-                        b.putInt(contentInt);
-                        content = b.array();
-
-                    } finally {
-
-                        // Compute HMAC and Compare
-                        if (useMacs) {
-
-                            // Performance Optimization (Save Mac object in Map) and reuse
-                            HashMap<Integer, WebClientServerSession> connections = ((NettyClientServerCommunicationSystemServerSide) communicationSystemServer).getWebClientConnections();
-                            WebClientServerSession webConnection = connections.get(new Integer(sender));
-                            Mac macReceive = webConnection.getMacReceived();
-
-                            if (macReceive == null) {
-                                // Init Mac Stuff if not already done
-                                SecretKeyFactory fac = SecretKeyFactory.getInstance("PBEWithMD5AndDES");
-                                String str = sender + ":" + config.getProcessId();
-                                PBEKeySpec spec = new PBEKeySpec(str.toCharArray());
-                                SecretKey authKey = fac.generateSecret(spec);
-                                macReceive = Mac.getInstance(config.getHmacAlgorithm());
-                                macReceive.init(authKey);
-                                webConnection.setMacReceived(macReceive);
-
-                            }
-
-                            // Cuts off hmac and compute the data sequence of the received message
-                            String dataString = jsonMsg.replace("{\"data\":", "");
-                            String[] words = dataString.split(",\"hmac");
-                            dataString = words[0];
-
-                            // Compute the hmac of this received data
-                            byte[] hmacComputedBytes = macReceive.doFinal(dataString.getBytes());
-                            String hmacComputed = DatatypeConverter.printHexBinary(hmacComputedBytes);
-                            hmacComputed = hmacComputed.toLowerCase();
-
-                            // Compare hmac computed with hmac received
-                            if (!hmacReceived.equals(hmacComputed)) {
-
-                                System.out.println(" =/= HMACS NOT EQUAL");
-                                System.out.println("HMAC RECEIVED " + hmacReceived);
-                                System.out.println("HMAC COMPUTED " + hmacComputed);
-
-                                // !!! Break out from method, do not deliver message to TOM Layer
-                                return;
-                            }
+                        if (macReceive == null) {
+                            // Init Mac Stuff if not already done
+                            SecretKeyFactory fac = SecretKeyFactory.getInstance("PBEWithMD5AndDES");
+                            String str = sender + ":" + config.getProcessId();
+                            PBEKeySpec spec = new PBEKeySpec(str.toCharArray());
+                            SecretKey authKey = fac.generateSecret(spec);
+                            macReceive = Mac.getInstance(config.getHmacAlgorithm());
+                            macReceive.init(authKey);
+                            webConnection.setMacReceived(macReceive);
 
                         }
 
-                        // Create the TOM Message and deliver it to TOM LAYER
-                        TOMMessage sm = new TOMMessage(sender, session, sequence, operationId, content, view, type);
-                        sm.serializedMessage = TOMMessage.messageToBytes(sm);
+                        // Cuts off hmac and compute the data sequence of the received message
+                        String dataString = jsonMsg.replace("{\"data\":", "");
+                        String[] words = dataString.split(",\"hmac");
+                        dataString = words[0];
 
-                        if (((NettyClientServerCommunicationSystemServerSide) communicationSystemServer)
-                                .getRequestReceiver() != null) {
-                            ((NettyClientServerCommunicationSystemServerSide) communicationSystemServer)
-                                    .getRequestReceiver().requestReceived(sm);
+                        // Compute the hmac of this received data
+                        byte[] hmacComputedBytes = macReceive.doFinal(dataString.getBytes());
+                        String hmacComputed = DatatypeConverter.printHexBinary(hmacComputedBytes);
+                        hmacComputed = hmacComputed.toLowerCase();
+
+                        // Compare hmac computed with hmac received
+                        if (!hmacReceived.equals(hmacComputed)) {
+
+                            System.out.println(" =/= HMACS NOT EQUAL");
+                            System.out.println("HMAC RECEIVED " + hmacReceived);
+                            System.out.println("HMAC COMPUTED " + hmacComputed);
+
+                            // !!! Break out from method, do not deliver message to TOM Layer
+                            return;
                         }
 
                     }
+
+                    // Create the TOM Message and deliver it to TOM LAYER
+                    TOMMessage sm = new TOMMessage(sender, session, sequence, operationId, content, view, type);
+                    sm.serializedMessage = TOMMessage.messageToBytes(sm);
+
+                    if (((NettyClientServerCommunicationSystemServerSide) communicationSystemServer)
+                            .getRequestReceiver() != null) {
+                        ((NettyClientServerCommunicationSystemServerSide) communicationSystemServer)
+                                .getRequestReceiver().requestReceived(sm);
+                    }
+
 
                 } catch (Exception e) {
                     e.printStackTrace();
