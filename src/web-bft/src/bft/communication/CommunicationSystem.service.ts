@@ -44,9 +44,9 @@ export class CommunicationSystem implements ICommunicationSystem {
     this.websocketService = new WebsocketService();
     this.clientViewController = viewController;
 
-    console.log('Current View is: ');
+    this.log('Current View is: ');
     viewController.getCurrentView().addresses.forEach((value: InternetAddress, key: number) => {
-      console.log('|->', value);
+      this.log('|->', value);
 
       let address: string = 'ws://' + value.address + ':' + value.port;
       let socket: Subject<any> = this.websocketService.createWebsocket(address);
@@ -54,7 +54,6 @@ export class CommunicationSystem implements ICommunicationSystem {
       let connection: ReplicaConnection = new ReplicaConnection(socket, null, null, key, password);
       this.sessionTable.set(key, connection);
     });
-
 
   }
 
@@ -75,20 +74,17 @@ export class CommunicationSystem implements ICommunicationSystem {
         let secret: string = connection.getSecret();
         let message: string = JSON.stringify(sm);
 
-        console.log('MESSAGE ', message);
+        this.log('MESSAGE ', message);
 
         hmac = CryptoJS.enc.Hex.stringify(CryptoJS.HmacSHA1(message, secret));
-
-        console.log(secret);
-        console.log(hmac);
       }
 
       let message = {data: sm, hmac: hmac};
-      console.log('send messsage + hmac', message);
+      this.log('send messsage + hmac', message);
       connection.getSocket().next(message);
     });
 
-    console.log('send ', sm);
+    this.log('send ', sm);
   }
 
   private receive(reply, replyReceiver: ReplyReceiver, connection: ReplicaConnection) {
@@ -99,20 +95,20 @@ export class CommunicationSystem implements ICommunicationSystem {
       if (this.TOMConfiguration.useMACs) {
 
         let hmacReceived = msgReceived.hmac;
-        console.log('RECEIVED HMAC ', hmacReceived);
+        this.log('RECEIVED HMAC ', hmacReceived);
         let secret: string = connection.getSecret();
         let data: string = JSON.stringify(msgReceived.data);
 
-        console.log('DATA ', data);
+        this.log('DATA ', data);
 
         let hmacComputed = CryptoJS.enc.Hex.stringify(CryptoJS.HmacSHA1(data, secret));
 
-        console.log('COMPUTED HMAC ', hmacComputed);
+        this.log('COMPUTED HMAC ', hmacComputed);
 
         if (hmacComputed == hmacReceived) {
-          console.log(hmacComputed + ' === ' + hmacReceived);
+          this.log(hmacComputed + ' === ' + hmacReceived);
         } else {
-          console.log(hmacComputed + ' =/= ' + hmacReceived);
+          this.log(hmacComputed + ' =/= ' + hmacReceived);
           // Do NOT deliver message to ServiceProxy when MAC is invalid
           return;
         }
@@ -129,9 +125,15 @@ export class CommunicationSystem implements ICommunicationSystem {
 
   public sign(sm: TOMMessage) {
 
+    throw new Error('Not yet implemented');
+
   }
 
   public close() {
+
+    this.sessionTable.forEach((connection: ReplicaConnection, replicaId: number) => {
+      connection.getSocket().complete();
+    });
 
   }
 
@@ -144,8 +146,8 @@ export class CommunicationSystem implements ICommunicationSystem {
     let oldView: View = this.clientViewController.lastView;
     let newView: View = this.clientViewController.currentView;
 
-    console.log('oldView ', oldView);
-    console.log('newView ', newView);
+    this.log('oldView ', oldView);
+    this.log('newView ', newView);
 
     let connectionsToAdd: Map<number, InternetAddress> = new Map(newView.addresses);
     let connectionsToRemove: Map<number, InternetAddress> = new Map();
@@ -162,7 +164,7 @@ export class CommunicationSystem implements ICommunicationSystem {
     for (let i of oldView.addresses.keys()) {
       // Connection is in the old but not in the new view
       if (!newView.addresses.get(i)) {
-        console.log(oldView.addresses.get(i), '!==', newView.addresses.get(i));
+        this.log(oldView.addresses.get(i), '!==', newView.addresses.get(i));
         // Add this connection from map of connections that must be removed from session table
         connectionsToRemove.set(i, newView.addresses.get(i));
       }
@@ -171,7 +173,7 @@ export class CommunicationSystem implements ICommunicationSystem {
     // Remove old connections
     connectionsToRemove.forEach((value: InternetAddress, key: number) => {
       this.sessionTable.delete(key);
-      console.log('#### RECONFIG: Removed replica ', key);
+      this.log('#### RECONFIG: Removed replica ', key);
     });
 
 
@@ -181,8 +183,19 @@ export class CommunicationSystem implements ICommunicationSystem {
       let socket: Subject<any> = this.websocketService.createWebsocket(address);
       let connection: ReplicaConnection = new ReplicaConnection(socket, null, null, key);
       this.sessionTable.set(key, connection);
-      console.log('#### RECONFIG: Added replica ', key);
+      this.log('#### RECONFIG: Added replica ', key);
     });
+  }
+
+  private log(var1, var2?, var3?) {
+    if (this.TOMConfiguration.debug) {
+      if(var3)
+      console.log(var1, var2, var3);
+      else if (var2)
+        console.log(var1, var2);
+      else
+        console.log(var1);
+    }
   }
 
 }

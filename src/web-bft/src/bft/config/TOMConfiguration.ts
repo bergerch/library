@@ -22,6 +22,7 @@ export interface Host extends InternetAddress {
 @Injectable()
 export class TOMConfiguration {
 
+
   /** Hosts Configurations */
 
   hosts: Host[] = [
@@ -121,6 +122,5 @@ export class TOMConfiguration {
 
   // Number of ahead-of-time messages necessary to trigger the state transfer after a request timeout occurs
   timeout_highMark = 200;
-
 
 }

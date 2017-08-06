@@ -22,6 +22,7 @@ export interface Host extends InternetAddress {
 @Injectable()
 export class TOMConfiguration {
 
+
   /** Hosts Configurations */
 
   hosts: Host[] = [
@@ -102,7 +103,7 @@ export class TOMConfiguration {
   useMACs = true;
 
   // Set to 1 if SMaRt should use the standard output to display debug messages, set to 0 if otherwise
-  debug = false;
+  debug = true;
 
   // Print information about the replica when it is shutdown
   shutdownhook = true;
@@ -121,6 +122,5 @@ export class TOMConfiguration {
 
   // Number of ahead-of-time messages necessary to trigger the state transfer after a request timeout occurs
   timeout_highMark = 200;
-
 
 }
