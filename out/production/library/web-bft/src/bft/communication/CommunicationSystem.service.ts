@@ -1,17 +1,15 @@
-/**
- * Created by chris on 23.04.17.
- */
 
 import {Injectable} from '@angular/core';
 import {ReplyReceiver} from "bft/tom/TOMSender.service";
 import {TOMMessage} from "../tom/messages/TOMMessage";
 import {ClientViewController} from "../reconfiguration/ClientViewController.controller";
-import {ReplicaConnection} from "./ReplicaConnection";
+import {ReplicaWSConnection} from "./ReplicaWSConnection";
 import {WebsocketService} from "./Websocket.service";
 import {Subject} from "rxjs/Subject";
 import {View} from "../reconfiguration/View";
 import {InternetAddress, TOMConfiguration} from "../config/TOMConfiguration";
 import * as CryptoJS from "../../../node_modules/crypto-js/crypto-js.js";
+import {ReplicaConnection} from "./ReplicaConnection";
 
 
 export interface ICommunicationSystem {
@@ -27,46 +25,44 @@ export interface ICommunicationSystem {
 @Injectable()
 export class CommunicationSystem implements ICommunicationSystem {
 
-  clientId: number;
   replyReceiver: ReplyReceiver;
   clientViewController: ClientViewController;
   sessionTable: Map<number, ReplicaConnection> = new Map<number, ReplicaConnection>();
 
-  //the signature engine used in the system
-  signatureEngine: Object;
-  signatureLength: number;
+  // the signature engine used in the system
+  // signatureEngine: Object;
+  // signatureLength: number;
   closed: boolean = false;
 
   protected websocketService: WebsocketService;
 
 
-  public constructor(clientId: number, viewController: ClientViewController, private TOMConfiguration: TOMConfiguration) {
+  public constructor(private clientId: number, viewController: ClientViewController, private TOMConfiguration: TOMConfiguration) {
     this.websocketService = new WebsocketService();
     this.clientViewController = viewController;
 
     this.log('Current View is: ');
-    viewController.getCurrentView().addresses.forEach((value: InternetAddress, key: number) => {
+    viewController.getCurrentView().addresses.forEach((value: InternetAddress, replicaId: number) => {
       this.log('|->', value);
 
       let address: string = 'ws://' + value.address + ':' + value.port;
       let socket: Subject<any> = this.websocketService.createWebsocket(address);
-      let password = '' + clientId + ':' + key;
-      let connection: ReplicaConnection = new ReplicaConnection(socket, null, null, key, password);
-      this.sessionTable.set(key, connection);
+      let password = '' + clientId + ':' + replicaId;
+      let connection: ReplicaWSConnection = new ReplicaWSConnection(socket, replicaId, password);
+      this.sessionTable.set(replicaId, connection);
     });
-
 
   }
 
   public send(sign: boolean, targets: number[], sm: TOMMessage, replyReceiver?: ReplyReceiver) {
 
     // Subscribe: When reply is received, parse JSON and execute replyListener
-    this.sessionTable.forEach((connection: ReplicaConnection, replicaId: number) => {
-      connection.getSocket().subscribe( (reply) => this.receive(reply, replyReceiver, connection));
+    this.sessionTable.forEach((connection: ReplicaWSConnection, replicaId: number) => {
+      connection.subscribe( (reply) => this.receive(reply, replyReceiver, connection));
     });
 
     // Send Message to all replicas
-    this.sessionTable.forEach((connection: ReplicaConnection, replicaId: number) => {
+    this.sessionTable.forEach((connection: ReplicaWSConnection, replicaId: number) => {
 
       // Creates MAC
       let hmac = '';
@@ -82,13 +78,13 @@ export class CommunicationSystem implements ICommunicationSystem {
 
       let message = {data: sm, hmac: hmac};
       this.log('send messsage + hmac', message);
-      connection.getSocket().next(message);
+      connection.send(message);
     });
 
     this.log('send ', sm);
   }
 
-  private receive(reply, replyReceiver: ReplyReceiver, connection: ReplicaConnection) {
+  private receive(reply, replyReceiver: ReplyReceiver, connection: ReplicaWSConnection) {
 
       let msgReceived = JSON.parse(reply.data);
 
@@ -132,8 +128,8 @@ export class CommunicationSystem implements ICommunicationSystem {
 
   public close() {
 
-    this.sessionTable.forEach((connection: ReplicaConnection, replicaId: number) => {
-      connection.getSocket().complete();
+    this.sessionTable.forEach((connection: ReplicaWSConnection) => {
+      connection.close();
     });
 
   }
@@ -179,18 +175,25 @@ export class CommunicationSystem implements ICommunicationSystem {
 
 
     // Establish and add new connections
-    connectionsToAdd.forEach((value: InternetAddress, key: number) => {
+    connectionsToAdd.forEach((value: InternetAddress, replicaId: number) => {
       let address: string = 'ws://' + value.address + ':' + value.port;
       let socket: Subject<any> = this.websocketService.createWebsocket(address);
-      let connection: ReplicaConnection = new ReplicaConnection(socket, null, null, key);
-      this.sessionTable.set(key, connection);
-      this.log('#### RECONFIG: Added replica ', key);
+      let password =  '' + this.clientId + ':' + replicaId;
+      let connection: ReplicaWSConnection = new ReplicaWSConnection(socket, replicaId, password);
+      this.sessionTable.set(replicaId, connection);
+      this.log('#### RECONFIG: Added replica ', replicaId);
     });
   }
 
   private log(var1, var2?, var3?) {
-    if (this.TOMConfiguration.debug)
+    if (this.TOMConfiguration.debug) {
+      if(var3)
       console.log(var1, var2, var3);
+      else if (var2)
+        console.log(var1, var2);
+      else
+        console.log(var1);
+    }
   }
 
 }

@@ -8,6 +8,7 @@ import {ClientViewController} from "../reconfiguration/ClientViewController.cont
 import {TOMConfiguration} from "../config/TOMConfiguration";
 import {TOMMessage} from "./messages/TOMMessage";
 import {TOMMessageType} from "./messages/TOMMessageType";
+import {Http} from "@angular/http";
 
 
 export interface ReplyReceiver {
@@ -47,11 +48,11 @@ export abstract class TOMSender implements Closeable {
   protected viewController: ClientViewController;
 
 
-  public constructor(protected TOMConfiguration: TOMConfiguration) {
+  public constructor(protected TOMConfiguration: TOMConfiguration, private http: Http) {
 
     this.viewController = new ClientViewController(this.me, this.TOMConfiguration);
     this.me = Math.round(Math.random() * 100000);
-    this.cs = new CommunicationSystem(this.me, this.viewController, TOMConfiguration);
+    this.cs = new CommunicationSystem(this.me, this.viewController, TOMConfiguration, http);
 
   }
 

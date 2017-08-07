@@ -109,7 +109,7 @@ export class ServiceProxy extends TOMSender implements ReplyReceiver {
         })
       }
 
-      console.log('Hosts ', hosts);
+      this.log('Hosts ', hosts);
       let view: View = new View(reply.content.id, reply.content.processes, reply.content.f, hosts);
       this.reconfigureTo(view);
       return;
@@ -131,7 +131,7 @@ export class ServiceProxy extends TOMSender implements ReplyReceiver {
     // When response passes quorum, deliver it to application via replyListener
     if (sameContent >= replyQuorum) {
       let response = this.extractor.extractResponse(replies, sameContent, lastReceived);
-      console.log('validated ', response);
+      this.log('validated ', response);
       this.replies.delete(response.sequence);
       this.replyListeners.get(response.sequence).replyReceived(response);
       this.replyListeners.delete(response.sequence);
@@ -234,6 +234,17 @@ export class ServiceProxy extends TOMSender implements ReplyReceiver {
   private reconfigureTo(view: View) {
     this.getViewController().setCurrentView(view);
     this.cs.updateConnections();
+  }
+
+  private log(var1, var2?, var3?) {
+    if (this.TOMConfiguration.debug) {
+      if(var3)
+        console.log(var1, var2, var3);
+      else if (var2)
+        console.log(var1, var2);
+      else
+        console.log(var1);
+    }
   }
 
 }

@@ -40,6 +40,9 @@ export class TOMConfiguration {
   ];
 
 
+  // If websockets should be used or simple http
+  websockets = true;
+
   /** Reconfiguration Configurations */
 
     // Replicas ID for the initial view, separated by a comma.

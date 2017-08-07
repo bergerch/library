@@ -28,7 +28,7 @@ export class AppComponent implements OnInit, ReplyListener {
   counter: Observable<any>;
 
 
-  constructor(websocketService: WebsocketService, private counterProxy: ServiceProxy) {
+  constructor(private counterProxy: ServiceProxy) {
 
   }
 
