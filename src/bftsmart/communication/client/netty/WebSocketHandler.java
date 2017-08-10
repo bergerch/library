@@ -1,8 +1,6 @@
 package bftsmart.communication.client.netty;
 
 import bftsmart.communication.client.CommunicationSystemServerSide;
-import bftsmart.reconfiguration.util.TOMConfiguration;
-import bftsmart.tom.core.messages.TOMMessage;
 import bftsmart.tom.util.Logger;
 
 import io.netty.channel.ChannelHandlerContext;
@@ -12,16 +10,6 @@ import io.netty.handler.codec.http.websocketx.PingWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.PongWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.WebSocketFrame;
-
-import java.util.HashMap;
-
-import javax.crypto.Mac;
-import javax.crypto.SecretKey;
-import javax.crypto.SecretKeyFactory;
-import javax.crypto.spec.PBEKeySpec;
-
-import javax.xml.bind.DatatypeConverter;
-
 
 public class WebSocketHandler extends WebClientHandler {
 

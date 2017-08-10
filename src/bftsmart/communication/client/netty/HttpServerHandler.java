@@ -96,11 +96,8 @@ public class HttpServerHandler extends WebClientHandler {
                     String jsonStr = jsonBuf.toString(CharsetUtil.UTF_8).replaceAll("\n", "").replaceAll("\t", "").replaceAll(" ", "");
                     this.readMessage(ctx, jsonStr);
                 }
-
             }
-
         }
-
     }
 
 

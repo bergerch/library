@@ -3,6 +3,7 @@ package bftsmart.communication.client.netty;
 import bftsmart.reconfiguration.util.TOMConfiguration;
 import bftsmart.tom.core.messages.TOMMessage;
 import bftsmart.tom.util.Logger;
+
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 
@@ -11,9 +12,11 @@ import javax.crypto.SecretKey;
 import javax.crypto.SecretKeyFactory;
 import javax.crypto.spec.PBEKeySpec;
 import javax.xml.bind.DatatypeConverter;
+
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.security.spec.InvalidKeySpecException;
+
 import java.util.HashMap;
 import java.util.List;
 
@@ -22,13 +25,19 @@ public abstract class WebClientHandler extends ChannelInboundHandlerAdapter {
     protected NettyClientServerCommunicationSystemServerSide communicationServer;
     protected TOMConfiguration config;
 
-   public WebClientHandler(NettyClientServerCommunicationSystemServerSide communicationServer) {
-       super();
-       this.communicationServer = communicationServer;
-       communicationServer.setWebClientHandler(this);
-       this.config = communicationServer.getController().getStaticConf();
-   }
+    public WebClientHandler(NettyClientServerCommunicationSystemServerSide communicationServer) {
+        super();
+        this.communicationServer = communicationServer;
+        communicationServer.setWebClientHandler(this);
+        this.config = communicationServer.getController().getStaticConf();
+    }
 
+    /**
+     * Sends a TOMMessage to a List of Web clients
+     *
+     * @param webClientReceivers List of web clients
+     * @param sm                 message
+     */
     public void send(List<WebClientServerSession> webClientReceivers, TOMMessage sm) {
 
         TOMMessageJSON tomMessageJSON = new TOMMessageJSON(sm);
@@ -79,6 +88,12 @@ public abstract class WebClientHandler extends ChannelInboundHandlerAdapter {
         }
     }
 
+    /**
+     * Reads a message string an passes it to TOM Layer, if MACs / signatures are valid
+     *
+     * @param ctx
+     * @param msgText
+     */
     public void readMessage(ChannelHandlerContext ctx, String msgText) {
 
         boolean useMacs = config.getUseMACs() == 1;
@@ -148,7 +163,13 @@ public abstract class WebClientHandler extends ChannelInboundHandlerAdapter {
 
     }
 
+    /**
+     * Sends the json message to a single web client
+     *
+     * @param clientSession
+     * @param jsonMsg
+     */
     public void sendTo(WebClientServerSession clientSession, String jsonMsg) {
-
+        // Is overwritten in sub classes!
     }
 }
