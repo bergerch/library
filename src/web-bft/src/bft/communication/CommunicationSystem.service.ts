@@ -49,7 +49,8 @@ export class CommunicationSystem implements ICommunicationSystem {
     viewController.getCurrentView().addresses.forEach((value: InternetAddress, replicaId: number) => {
       this.log('|->', value);
 
-      let address: string = 'ws://' + value.address + ':' + value.port;
+      let protocol: string = TOMConfiguration.websockets ? 'ws://' : 'http://';
+      let address: string = protocol + value.address + ':' + value.port;
       let password = '' + clientId + ':' + replicaId;
 
       let connection: ReplicaConnection = this.connectTo(address, replicaId, password);

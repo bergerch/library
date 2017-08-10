@@ -73,7 +73,7 @@ public class NettyClientServerCommunicationSystemServerSide extends SimpleChanne
 	private Channel mainChannel;
 	private Channel secondChannel;
 
-	private WebSocketHandler webSocketHandler;
+	private WebClientHandler webClientHandler;
 	private HashMap<Integer, WebClientServerSession> webClientConnections;
         // This locked seems to introduce a bottleneck and seems useless, but I cannot recall why I added it
 	//private ReentrantLock sendLock = new ReentrantLock();
@@ -308,7 +308,7 @@ public class NettyClientServerCommunicationSystemServerSide extends SimpleChanne
 		}
 
 		if (!webClientReceivers.isEmpty()) {
-			webSocketHandler.send(webClientReceivers, sm);
+			webClientHandler.send(webClientReceivers, sm);
 		}
 
 		if (targetsNetty.size() == 0) {
@@ -449,8 +449,8 @@ public class NettyClientServerCommunicationSystemServerSide extends SimpleChanne
 		return serverPipelineFactory;
 	}
 
-	public void setWebSocketHandler(WebSocketHandler webSocketHandler) {
-		this.webSocketHandler = webSocketHandler;
+	public void setWebClientHandler(WebClientHandler webClientHandler) {
+		this.webClientHandler = webClientHandler;
 	}
 
 	public HashMap<Integer, WebClientServerSession> getWebClientConnections() {

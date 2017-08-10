@@ -57,7 +57,8 @@ public class TOMConfiguration extends Configuration {
     private boolean isBFT;
     private int numRepliers;
     private int numNettyWorkers;
-    
+    private boolean websockets;
+
     /** Creates a new instance of TOMConfiguration */
     public TOMConfiguration(int processId) {
         super(processId);
@@ -330,7 +331,10 @@ public class TOMConfiguration extends Configuration {
             } else {
                 numNettyWorkers = Integer.parseInt(s);
             }
-            
+
+            s = (String) configs.remove("system.communication.websockets");
+            websockets = (s != null) ? Boolean.parseBoolean(s) : true;
+
             rsaLoader = new RSAKeyLoader(processId, TOMConfiguration.configHome, defaultKeys);
         } catch (Exception e) {
             e.printStackTrace(System.err);
@@ -524,5 +528,9 @@ public class TOMConfiguration extends Configuration {
     
     public int getNumNettyWorkers() {
         return numNettyWorkers;
+    }
+
+    public boolean usesWebSockets(){
+        return websockets;
     }
 }

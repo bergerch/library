@@ -41,7 +41,7 @@ export class TOMConfiguration {
 
 
   // If websockets should be used or simple http
-  websockets = true;
+  websockets = false;
 
   /** Reconfiguration Configurations */
 

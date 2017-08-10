@@ -1,5 +1,6 @@
-import { Injectable } from '@angular/core';
-import {Http, RequestOptionsArgs} from '@angular/http';
+import {Injectable} from '@angular/core';
+import {Headers, Http, RequestOptions, RequestOptionsArgs} from '@angular/http';
+
 
 @Injectable()
 export class SimpleHttpService {
@@ -13,9 +14,20 @@ export class SimpleHttpService {
     return response.json();
   }
 
+
   public async post(body: any, options?: RequestOptionsArgs): Promise<any> {
-    const response = await this.http.post(this.url, body, options).toPromise();
-    return response.json();
+    try {
+
+      if (!options) {
+        let headers = new Headers({'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'});
+        options = new RequestOptions({headers: headers});
+      }
+      const response = await this.http.post(this.url, body, options).toPromise();
+      return response.json();
+    }
+    catch (error) {
+      console.error(error);
+    }
   }
 
 }

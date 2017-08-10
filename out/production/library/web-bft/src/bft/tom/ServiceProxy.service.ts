@@ -13,6 +13,7 @@ import {TOMMessage} from "./messages/TOMMessage";
 import {ReplyListener} from "../communication/ReplyListener.interface";
 import {View} from "../reconfiguration/View";
 import Queue = jasmine.Queue;
+import {Http} from "@angular/http";
 
 
 @Injectable()
@@ -34,8 +35,8 @@ export class ServiceProxy extends TOMSender implements ReplyReceiver {
   extractor: Extractor;
 
 
-  public constructor(TOMConfiguration: TOMConfiguration) {
-    super(TOMConfiguration);
+  public constructor(TOMConfiguration: TOMConfiguration, http: Http) {
+    super(TOMConfiguration, http);
 
     this.comparator = (this.comparator != null) ? this.comparator : {
       compare: function (o1: any, o2: any): number {
