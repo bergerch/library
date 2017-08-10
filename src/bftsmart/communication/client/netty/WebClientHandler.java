@@ -3,8 +3,8 @@ package bftsmart.communication.client.netty;
 import bftsmart.reconfiguration.util.TOMConfiguration;
 import bftsmart.tom.core.messages.TOMMessage;
 import bftsmart.tom.util.Logger;
+import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
-import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
 
 import javax.crypto.Mac;
 import javax.crypto.SecretKey;
@@ -14,6 +14,7 @@ import javax.xml.bind.DatatypeConverter;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.security.spec.InvalidKeySpecException;
+import java.util.HashMap;
 import java.util.List;
 
 public abstract class WebClientHandler extends ChannelInboundHandlerAdapter {
@@ -76,6 +77,75 @@ public abstract class WebClientHandler extends ChannelInboundHandlerAdapter {
             this.sendTo(clientSession, jsonMsg);
             Logger.println(" Client <--- Replica | TextWebSocketFrame Sent : " + jsonMsg);
         }
+    }
+
+    public void readMessage(ChannelHandlerContext ctx, String msgText) {
+
+        boolean useMacs = config.getUseMACs() == 1;
+        TOMMessageJSON tomMessageJSON = new TOMMessageJSON(msgText, useMacs);
+
+        try {
+
+            // Add websocket connection to map of all web clients
+            int sender = tomMessageJSON.getTOMMsg().getSender();
+            WebClientServerSession wcss = new WebClientServerSession(ctx, communicationServer.getController()
+                    .getStaticConf().getProcessId(), sender);
+            HashMap<Integer, WebClientServerSession> webClients = communicationServer.getWebClientConnections();
+
+            if (!webClients.containsValue(wcss)) {
+                webClients.put(new Integer(sender), wcss);
+            }
+
+            // Compute HMAC and Compare
+            if (useMacs) {
+
+                // Performance Optimization (Save Mac object in Map) and reuse
+                HashMap<Integer, WebClientServerSession> connections =
+                        communicationServer.getWebClientConnections();
+                WebClientServerSession webConnection = connections.get(new Integer(sender));
+                Mac macReceive = webConnection.getMacReceived();
+
+                if (macReceive == null) {
+                    // Init Mac Stuff if not already done
+                    SecretKeyFactory fac = SecretKeyFactory.getInstance("PBEWithMD5AndDES");
+                    String str = sender + ":" + config.getProcessId();
+                    PBEKeySpec spec = new PBEKeySpec(str.toCharArray());
+                    SecretKey authKey = fac.generateSecret(spec);
+                    macReceive = Mac.getInstance(config.getHmacAlgorithm());
+                    macReceive.init(authKey);
+                    webConnection.setMacReceived(macReceive);
+                }
+
+                String hmacReceived = tomMessageJSON.getHMAC();
+
+                // Compute the hmac of this received data
+                String dataString = tomMessageJSON.getDataString();
+                byte[] hmacComputedBytes = macReceive.doFinal(dataString.getBytes());
+                String hmacComputed = DatatypeConverter.printHexBinary(hmacComputedBytes);
+                hmacComputed = hmacComputed.toLowerCase();
+
+                // Compare hmac computed with hmac received
+                if (!hmacReceived.equals(hmacComputed)) {
+
+                    System.out.println(" =/= HMACS NOT EQUAL");
+                    System.out.println("HMAC RECEIVED " + hmacReceived);
+                    System.out.println("HMAC COMPUTED " + hmacComputed);
+
+                    // !!! Break out from method, do not deliver message to TOM Layer
+                    return;
+                }
+
+            }
+
+            // Create the TOM Message and deliver it to TOM LAYER
+            if (communicationServer.getRequestReceiver() != null) {
+                communicationServer.getRequestReceiver().requestReceived(tomMessageJSON.getTOMMsg());
+            }
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
     }
 
     public void sendTo(WebClientServerSession clientSession, String jsonMsg) {

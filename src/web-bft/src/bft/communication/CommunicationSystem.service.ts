@@ -1,4 +1,3 @@
-
 import {Injectable} from '@angular/core';
 import {ReplyReceiver} from "bft/tom/TOMSender.service";
 import {TOMMessage} from "../tom/messages/TOMMessage";
@@ -75,7 +74,7 @@ export class CommunicationSystem implements ICommunicationSystem {
 
     // Subscribe: When reply is received, parse JSON and execute replyListener
     this.sessionTable.forEach((connection: ReplicaConnection, replicaId: number) => {
-      connection.subscribe( (reply) => this.receive(reply, replyReceiver, connection));
+      connection.subscribe((reply) => this.receive(reply, replyReceiver, connection));
     });
 
     // Send Message to all replicas
@@ -103,32 +102,35 @@ export class CommunicationSystem implements ICommunicationSystem {
 
   private receive(reply, replyReceiver: ReplyReceiver, connection: ReplicaConnection) {
 
-      let msgReceived = JSON.parse(reply.data);
+    let msgReceived = reply;
+    if (this.TOMConfiguration.websockets) {
+      msgReceived = JSON.parse(reply.data);
+    }
 
-      // Compute and compare hmacs
-      if (this.TOMConfiguration.useMACs) {
+    // Compute and compare hmacs
+    if (this.TOMConfiguration.useMACs) {
 
-        let hmacReceived = msgReceived.hmac;
-        this.log('RECEIVED HMAC ', hmacReceived);
-        let secret: string = connection.getSecret();
-        let data: string = JSON.stringify(msgReceived.data);
+      let hmacReceived = msgReceived.hmac;
+      this.log('RECEIVED HMAC ', hmacReceived);
+      let secret: string = connection.getSecret();
+      let data: string = JSON.stringify(msgReceived.data);
 
-        this.log('DATA ', data);
+      this.log('DATA ', data);
 
-        let hmacComputed = CryptoJS.enc.Hex.stringify(CryptoJS.HmacSHA1(data, secret));
+      let hmacComputed = CryptoJS.enc.Hex.stringify(CryptoJS.HmacSHA1(data, secret));
 
-        this.log('COMPUTED HMAC ', hmacComputed);
+      this.log('COMPUTED HMAC ', hmacComputed);
 
-        if (hmacComputed == hmacReceived) {
-          this.log(hmacComputed + ' === ' + hmacReceived);
-        } else {
-          this.log(hmacComputed + ' =/= ' + hmacReceived);
-          // Do NOT deliver message to ServiceProxy when MAC is invalid
-          return;
-        }
+      if (hmacComputed == hmacReceived) {
+        this.log(hmacComputed + ' === ' + hmacReceived);
+      } else {
+        this.log(hmacComputed + ' =/= ' + hmacReceived);
+        // Do NOT deliver message to ServiceProxy when MAC is invalid
+        return;
       }
+    }
 
-      replyReceiver.replyReceived(msgReceived.data);
+    replyReceiver.replyReceived(msgReceived.data);
 
   }
 
@@ -191,7 +193,7 @@ export class CommunicationSystem implements ICommunicationSystem {
     // Establish and add new connections
     connectionsToAdd.forEach((value: InternetAddress, replicaId: number) => {
       let address: string = 'ws://' + value.address + ':' + value.port;
-      let password =  '' + this.clientId + ':' + replicaId;
+      let password = '' + this.clientId + ':' + replicaId;
       let connection: ReplicaConnection = this.connectTo(address, replicaId, password);
       this.sessionTable.set(replicaId, connection);
       this.log('#### RECONFIG: Added replica ', replicaId);
@@ -200,8 +202,8 @@ export class CommunicationSystem implements ICommunicationSystem {
 
   private log(var1, var2?, var3?) {
     if (this.TOMConfiguration.debug) {
-      if(var3)
-      console.log(var1, var2, var3);
+      if (var3)
+        console.log(var1, var2, var3);
       else if (var2)
         console.log(var1, var2);
       else

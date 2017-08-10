@@ -1,13 +1,12 @@
 package bftsmart.communication.client.netty;
 
 import bftsmart.communication.client.CommunicationSystemServerSide;
-import bftsmart.reconfiguration.util.TOMConfiguration;
-import bftsmart.tom.core.messages.TOMMessage;
+import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.*;
-import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.WebSocketServerHandshaker;
 import io.netty.handler.codec.http.websocketx.WebSocketServerHandshakerFactory;
+import io.netty.util.CharsetUtil;
 
 import java.net.URISyntaxException;
 import java.util.ArrayList;
@@ -32,7 +31,7 @@ public class HttpServerHandler extends WebClientHandler {
                 HttpResponseStatus.OK,
                 copiedBuffer(jsonMsg.getBytes())
         );
-        if (HttpHeaders.isKeepAlive(httpRequest)) {
+        if (httpRequest != null && httpRequest.headers() != null && HttpHeaders.isKeepAlive(httpRequest)) {
             response.headers().set(
                     HttpHeaders.Names.CONNECTION,
                     HttpHeaders.Values.KEEP_ALIVE
@@ -56,27 +55,22 @@ public class HttpServerHandler extends WebClientHandler {
         response.headers().set(HttpHeaders.Names.CONTENT_LENGTH,
                 jsonMsg.length());
 
-         clientSession.getCtx().writeAndFlush(response);
+        clientSession.getCtx().writeAndFlush(response);
     }
 
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) {
 
-        if (msg instanceof FullHttpMessage) {
-            System.out.println("Full HTTP Message Received");
-        } else if (msg instanceof HttpRequest) {
-
-            if (msg instanceof FullHttpRequest) {
-                System.out.println("Full HTTP Request");
-            }
+        if (msg instanceof HttpRequest || msg instanceof FullHttpMessage) {
 
             HttpRequest httpRequest = (HttpRequest) msg;
             this.httpRequest = httpRequest;
             HttpHeaders headers = httpRequest.headers();
 
             // Upgrade to Websocket connection
-            if ((headers.get("Connection") != null && headers.get("Connection").equalsIgnoreCase("Upgrade")) ||
-                    (headers.get("Upgrade") != null && headers.get("Upgrade").equalsIgnoreCase("WebSocket"))) {
+            if ((this.config.getUseWebsockets() &&
+                    (headers.get("Connection") != null && headers.get("Connection").equalsIgnoreCase("Upgrade")) ||
+                    (headers.get("Upgrade") != null && headers.get("Upgrade").equalsIgnoreCase("WebSocket")))) {
 
                 System.out.println("Connection : " + headers.get("Connection"));
                 System.out.println("Upgrade : " + headers.get("Upgrade"));
@@ -97,7 +91,11 @@ public class HttpServerHandler extends WebClientHandler {
 
             } else { // Handle HTTP Request
 
-                // TODO
+                if (msg instanceof FullHttpRequest) {
+                    ByteBuf jsonBuf = ((FullHttpRequest) msg).content();
+                    String jsonStr = jsonBuf.toString(CharsetUtil.UTF_8).replaceAll("\n", "").replaceAll("\t", "").replaceAll(" ", "");
+                    this.readMessage(ctx, jsonStr);
+                }
 
             }
 
@@ -141,5 +139,6 @@ public class HttpServerHandler extends WebClientHandler {
         System.out.println("Constructed URL : " + url);
         return url;
     }
+
 
 }

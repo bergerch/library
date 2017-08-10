@@ -332,7 +332,7 @@ public class TOMConfiguration extends Configuration {
                 numNettyWorkers = Integer.parseInt(s);
             }
 
-            s = (String) configs.remove("system.communication.websockets");
+            s = (String) configs.remove("system.communication.use_websockets");
             websockets = (s != null) ? Boolean.parseBoolean(s) : true;
 
             rsaLoader = new RSAKeyLoader(processId, TOMConfiguration.configHome, defaultKeys);
@@ -350,6 +350,9 @@ public class TOMConfiguration extends Configuration {
             return s;
         }
 
+    }
+    public boolean getUseWebsockets() {
+        return this.websockets;
     }
 
     public boolean isTheTTP() {
