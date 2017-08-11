@@ -26,35 +26,9 @@ public class HttpServerHandler extends WebClientHandler {
 
     @Override
     public void sendTo(WebClientServerSession clientSession, String jsonMsg) {
-        FullHttpResponse response = new DefaultFullHttpResponse(
-                HttpVersion.HTTP_1_1,
-                HttpResponseStatus.OK,
-                copiedBuffer(jsonMsg.getBytes())
+        FullHttpResponse response = new BFTFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK,
+                copiedBuffer(jsonMsg.getBytes()), httpRequest, jsonMsg.length()
         );
-        if (httpRequest != null && httpRequest.headers() != null && HttpHeaders.isKeepAlive(httpRequest)) {
-            response.headers().set(
-                    HttpHeaders.Names.CONNECTION,
-                    HttpHeaders.Values.KEEP_ALIVE
-            );
-        }
-
-        List<String> allowMethods = new ArrayList<>();
-        allowMethods.add("GET");
-        allowMethods.add("POST");
-        response.headers().set(
-                HttpHeaders.Names.ACCESS_CONTROL_ALLOW_METHODS, allowMethods
-
-        );
-        response.headers().set(
-                HttpHeaders.Names.ACCESS_CONTROL_ALLOW_ORIGIN, "*"
-
-        );
-
-        response.headers().set(HttpHeaders.Names.CONTENT_TYPE,
-                "text/plain");
-        response.headers().set(HttpHeaders.Names.CONTENT_LENGTH,
-                jsonMsg.length());
-
         clientSession.getCtx().writeAndFlush(response);
     }
 
@@ -137,5 +111,26 @@ public class HttpServerHandler extends WebClientHandler {
         return url;
     }
 
+
+    public class BFTFullHttpResponse extends DefaultFullHttpResponse {
+
+        public BFTFullHttpResponse(HttpVersion version, HttpResponseStatus status, ByteBuf content, HttpRequest httpRequest, int length) {
+            super(version, status, content);
+            if (httpRequest != null && httpRequest.headers() != null && HttpHeaders.isKeepAlive(httpRequest)) {
+                this.headers().set(
+                        HttpHeaders.Names.CONNECTION,
+                        HttpHeaders.Values.KEEP_ALIVE
+                );
+            }
+            List<String> allowMethods = new ArrayList<>();
+            allowMethods.add("GET");
+            allowMethods.add("POST");
+            this.headers().set(HttpHeaders.Names.ACCESS_CONTROL_ALLOW_METHODS, allowMethods);
+            this.headers().set(HttpHeaders.Names.ACCESS_CONTROL_ALLOW_ORIGIN, "*");
+            this.headers().set(HttpHeaders.Names.CONTENT_TYPE, "text/plain");
+            this.headers().set(HttpHeaders.Names.CONTENT_LENGTH, length);
+        }
+
+    }
 
 }
