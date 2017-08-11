@@ -37,6 +37,8 @@ export class CommunicationSystem implements ICommunicationSystem {
   protected websocketService: WebsocketService;
   protected http: Http;
 
+  private protocol: string;
+
 
   public constructor(private clientId: number, viewController: ClientViewController, private TOMConfiguration: TOMConfiguration, http: Http) {
     this.websocketService = new WebsocketService();
@@ -47,8 +49,8 @@ export class CommunicationSystem implements ICommunicationSystem {
     viewController.getCurrentView().addresses.forEach((value: InternetAddress, replicaId: number) => {
       this.log('|->', value);
 
-      let protocol: string = TOMConfiguration.websockets ? 'ws://' : 'http://';
-      let address: string = protocol + value.address + ':' + value.port;
+      this.protocol = TOMConfiguration.websockets ? 'ws://' : 'http://';
+      let address: string = this.protocol + value.address + ':' + value.port;
       let password = '' + clientId + ':' + replicaId;
 
       let connection: ReplicaConnection = this.connectTo(address, replicaId, password);
@@ -171,7 +173,7 @@ export class CommunicationSystem implements ICommunicationSystem {
 
     // Establish and add new connections
     connectionsToAdd.forEach((value: InternetAddress, replicaId: number) => {
-      let address: string = 'ws://' + value.address + ':' + value.port;
+      let address: string = this.protocol + value.address + ':' + value.port;
       let password = '' + this.clientId + ':' + replicaId;
       let connection: ReplicaConnection = this.connectTo(address, replicaId, password);
       this.sessionTable.set(replicaId, connection);
