@@ -44,22 +44,23 @@ export class CommunicationSystem implements ICommunicationSystem {
     this.websocketService = new WebsocketService();
     this.clientViewController = viewController;
     this.http = http;
+    this.protocol = TOMConfiguration.websockets ? 'ws://' : 'http://';
 
     this.log('Current View is: ');
-    viewController.getCurrentView().addresses.forEach((value: InternetAddress, replicaId: number) => {
-      this.log('|->', value);
+    viewController.getCurrentView().addresses.forEach((internetAddress: InternetAddress, replicaId: number) => {
+      this.log('|->', internetAddress);
 
-      this.protocol = TOMConfiguration.websockets ? 'ws://' : 'http://';
-      let address: string = this.protocol + value.address + ':' + value.port;
       let password = '' + clientId + ':' + replicaId;
 
-      let connection: ReplicaConnection = this.connectTo(address, replicaId, password);
+      // Open connection to replica
+      let connection: ReplicaConnection = this.connectTo(internetAddress, replicaId, password);
       this.sessionTable.set(replicaId, connection);
     });
 
   }
 
-  private connectTo(address: string, replicaId: number, password?: string): ReplicaConnection {
+  private connectTo(internetAddress: InternetAddress, replicaId: number, password?: string): ReplicaConnection {
+    let address: string = this.protocol + internetAddress.address + ':' + internetAddress.port;
     let connection: ReplicaConnection;
     if (this.TOMConfiguration.websockets) {
       let socket: Subject<any> = this.websocketService.createWebsocket(address);
@@ -165,17 +166,16 @@ export class CommunicationSystem implements ICommunicationSystem {
     }
 
     // Remove old connections
-    connectionsToRemove.forEach((value: InternetAddress, key: number) => {
+    connectionsToRemove.forEach((internetAddress: InternetAddress, key: number) => {
       this.sessionTable.get(key).close();
       this.sessionTable.delete(key);
       this.log('#### RECONFIG: Removed replica ', key);
     });
 
     // Establish and add new connections
-    connectionsToAdd.forEach((value: InternetAddress, replicaId: number) => {
-      let address: string = this.protocol + value.address + ':' + value.port;
+    connectionsToAdd.forEach((internetAddress: InternetAddress, replicaId: number) => {
       let password = '' + this.clientId + ':' + replicaId;
-      let connection: ReplicaConnection = this.connectTo(address, replicaId, password);
+      let connection: ReplicaConnection = this.connectTo(internetAddress, replicaId, password);
       this.sessionTable.set(replicaId, connection);
       this.log('#### RECONFIG: Added replica ', replicaId);
     });
