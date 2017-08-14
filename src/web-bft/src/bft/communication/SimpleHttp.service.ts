@@ -5,16 +5,26 @@ import {Headers, Http, RequestOptions, RequestOptionsArgs} from '@angular/http';
 @Injectable()
 export class SimpleHttpService {
 
-  constructor(private http: Http, private url) {
+  constructor(private http: Http, private url) {}
 
-  }
-
+  /**
+   * GET-Request to a HTTP Server
+   *
+   * @param options
+   * @returns {Promise<any|Promise<any>>}
+   */
   public async get(options?: RequestOptionsArgs): Promise<number> {
     const response = await this.http.get(this.url, options).toPromise();
     return response.json();
   }
 
 
+  /**
+   * POST-Request to a HTTP Server
+   *
+   * @param options
+   * @returns {Promise<any|Promise<any>>}
+   */
   public async post(body: any, options?: RequestOptionsArgs): Promise<any> {
     try {
 

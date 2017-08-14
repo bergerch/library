@@ -10,7 +10,6 @@ import {ReplicaConnection} from "./ReplicaConnection";
 @Injectable()
 export class ReplicaWSConnection extends Replica implements ReplicaConnection {
 
-
   socket: Subject<any>;
 
   public constructor(socket: Subject<any>, replicaId, secret?: string) {

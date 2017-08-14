@@ -105,7 +105,7 @@ export abstract class TOMSender implements Closeable {
    * @param sm Message to be multicast
    */
   public TOMulticast(sm: TOMMessage, replyReceiver?: ReplyReceiver) {
-    this.cs.send(this.useSignatures, this.viewController.getCurrentView().processes, sm, replyReceiver);
+    this.cs.send(this.useSignatures, sm, replyReceiver);
   }
 
   /**
@@ -117,7 +117,7 @@ export abstract class TOMSender implements Closeable {
    */
   public TOMulticastData(m: any, reqId: number, reqType: TOMMessageType, operationsId?: number, replyReceiver?: ReplyReceiver) {
     let operatId = operationsId ? operationsId : -1;
-    this.cs.send(this.useSignatures, this.viewController.getCurrentView().processes,
+    this.cs.send(this.useSignatures,
       new TOMMessage(this.me, this.session, reqId, operatId, m, this.getViewController().getCurrentView().id, reqType),
       replyReceiver);
   }

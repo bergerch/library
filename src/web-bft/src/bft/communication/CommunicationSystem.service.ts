@@ -11,22 +11,19 @@ import {ReplicaConnection} from "./ReplicaConnection";
 import {SimpleHttpService} from "./SimpleHttp.service";
 import {Http} from "@angular/http";
 import {ReplicaHTTPConnection} from "./ReplicaHTTPConnection";
+import {ICommunicationSystem} from "./ICommunicationSystem.interface";
 
-export interface ICommunicationSystem {
-
-  send(sign: boolean, targets: number[], sm: TOMMessage, replyReceiver?: ReplyReceiver);
-  setReplyReceiver(trr: ReplyReceiver);
-  sign(sm: TOMMessage);
-  close();
-  updateConnections();
-
-}
-
+/**
+ * The Communication system represents the interface that connects with
+ * BFT-SMaRTs ClientServerCommunicationSystemServerSide.
+ */
 @Injectable()
 export class CommunicationSystem implements ICommunicationSystem {
 
-  replyReceiver: ReplyReceiver;
+  // handles view management / reconfiguration
   clientViewController: ClientViewController;
+
+  // map handles all replica connections
   sessionTable: Map<number, ReplicaConnection> = new Map<number, ReplicaConnection>();
 
   // the signature engine used in the system
@@ -39,7 +36,14 @@ export class CommunicationSystem implements ICommunicationSystem {
 
   private protocol: string;
 
-
+  /**
+   * Constructs a new CommunicationSystem, opens a connection to each replica
+   *
+   * @param clientId id of the Client
+   * @param viewController controller for the view
+   * @param TOMConfiguration TOM config object
+   * @param http http service
+   */
   public constructor(private clientId: number, viewController: ClientViewController, private TOMConfiguration: TOMConfiguration, http: Http) {
     this.websocketService = new WebsocketService();
     this.clientViewController = viewController;
@@ -53,13 +57,21 @@ export class CommunicationSystem implements ICommunicationSystem {
       let password = '' + clientId + ':' + replicaId;
 
       // Open connection to replica
-      let connection: ReplicaConnection = this.connectTo(internetAddress, replicaId, password);
+      let connection: ReplicaConnection = this.connectTo(replicaId, password);
       this.sessionTable.set(replicaId, connection);
     });
 
   }
 
-  private connectTo(internetAddress: InternetAddress, replicaId: number, password?: string): ReplicaConnection {
+  /**
+   * Establishes a connection to a specific replica
+   *
+   * @param replicaId id of replica
+   * @param password shared secret for hmacs
+   * @returns {ReplicaConnection} The established connection to the specific replica
+   */
+  private connectTo(replicaId: number, password?: string): ReplicaConnection {
+    let internetAddress: InternetAddress = this.clientViewController.getCurrentView().addresses.get(replicaId);
     let address: string = this.protocol + internetAddress.address + ':' + internetAddress.port;
     let connection: ReplicaConnection;
     if (this.TOMConfiguration.websockets) {
@@ -72,7 +84,16 @@ export class CommunicationSystem implements ICommunicationSystem {
     return connection;
   }
 
-  public send(sign: boolean, targets: number[], sm: TOMMessage, replyReceiver?: ReplyReceiver) {
+
+  /**
+   * Sends a TOMMessage sm to all replicas (broadcast). The replyReceiver is a callback function that will be executed
+   * when the replica's response is obtained. Also attaches hmac to message.
+   *
+   * @param sign not used / implemented currently
+   * @param sm TOMMessage
+   * @param replyReceiver
+   */
+  public send(sign: boolean, sm: TOMMessage, replyReceiver?: ReplyReceiver) {
 
     // Subscribe: When reply is received, parse JSON and execute replyListener
     this.sessionTable.forEach((connection: ReplicaConnection) => {
@@ -94,6 +115,14 @@ export class CommunicationSystem implements ICommunicationSystem {
     this.log('send ', sm);
   }
 
+  /**
+   * Receives a reply from the replica and checks if hmac / signature is correct. If so, it will be delivered to
+   * ServiceProxy
+   *
+   * @param reply reply from replica
+   * @param replyReceiver callback function from TOMSender
+   * @param connection connection object between client and replica
+   */
   private receive(reply, replyReceiver: ReplyReceiver, connection: ReplicaConnection) {
 
     let msgReceived = reply;
@@ -115,24 +144,29 @@ export class CommunicationSystem implements ICommunicationSystem {
     }
 
     replyReceiver.replyReceived(msgReceived.data);
-
   }
 
 
-  public setReplyReceiver(replyReceiver: ReplyReceiver) {
-    this.replyReceiver = replyReceiver;
-  }
-
+  /**
+   * Signs the TOMMessage. Currently not implemented
+   * @param sm
+   */
   public sign(sm: TOMMessage) {
     throw new Error('Not yet implemented');
   }
 
+  /**
+   * Closes all connections
+   */
   public close() {
     this.sessionTable.forEach((connection: ReplicaConnection) => {
       connection.close();
     });
   }
 
+  /**
+   * Updates all connections according to the new View
+   */
   public updateConnections() {
 
     if (!this.websocketService) {
@@ -175,7 +209,7 @@ export class CommunicationSystem implements ICommunicationSystem {
     // Establish and add new connections
     connectionsToAdd.forEach((internetAddress: InternetAddress, replicaId: number) => {
       let password = '' + this.clientId + ':' + replicaId;
-      let connection: ReplicaConnection = this.connectTo(internetAddress, replicaId, password);
+      let connection: ReplicaConnection = this.connectTo(replicaId, password);
       this.sessionTable.set(replicaId, connection);
       this.log('#### RECONFIG: Added replica ', replicaId);
     });
