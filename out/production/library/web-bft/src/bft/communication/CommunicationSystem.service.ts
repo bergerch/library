@@ -7,27 +7,23 @@ import {WebsocketService} from "./Websocket.service";
 import {Subject} from "rxjs/Subject";
 import {View} from "../reconfiguration/View";
 import {InternetAddress, TOMConfiguration} from "../config/TOMConfiguration";
-import * as CryptoJS from "../../../node_modules/crypto-js/crypto-js.js";
 import {ReplicaConnection} from "./ReplicaConnection";
 import {SimpleHttpService} from "./SimpleHttp.service";
 import {Http} from "@angular/http";
 import {ReplicaHTTPConnection} from "./ReplicaHTTPConnection";
+import {ICommunicationSystem} from "./ICommunicationSystem.interface";
 
-export interface ICommunicationSystem {
-
-  send(sign: boolean, targets: number[], sm: TOMMessage, replyReceiver?: ReplyReceiver);
-  setReplyReceiver(trr: ReplyReceiver);
-  sign(sm: TOMMessage);
-  close();
-  updateConnections();
-
-}
-
+/**
+ * The Communication system represents the interface that connects with
+ * BFT-SMaRTs ClientServerCommunicationSystemServerSide.
+ */
 @Injectable()
 export class CommunicationSystem implements ICommunicationSystem {
 
-  replyReceiver: ReplyReceiver;
+  // handles view management / reconfiguration
   clientViewController: ClientViewController;
+
+  // map handles all replica connections
   sessionTable: Map<number, ReplicaConnection> = new Map<number, ReplicaConnection>();
 
   // the signature engine used in the system
@@ -38,27 +34,45 @@ export class CommunicationSystem implements ICommunicationSystem {
   protected websocketService: WebsocketService;
   protected http: Http;
 
+  private protocol: string;
 
+  /**
+   * Constructs a new CommunicationSystem, opens a connection to each replica
+   *
+   * @param clientId id of the Client
+   * @param viewController controller for the view
+   * @param TOMConfiguration TOM config object
+   * @param http http service
+   */
   public constructor(private clientId: number, viewController: ClientViewController, private TOMConfiguration: TOMConfiguration, http: Http) {
     this.websocketService = new WebsocketService();
     this.clientViewController = viewController;
     this.http = http;
+    this.protocol = TOMConfiguration.websockets ? 'ws://' : 'http://';
 
     this.log('Current View is: ');
-    viewController.getCurrentView().addresses.forEach((value: InternetAddress, replicaId: number) => {
-      this.log('|->', value);
+    viewController.getCurrentView().addresses.forEach((internetAddress: InternetAddress, replicaId: number) => {
+      this.log('|->', internetAddress);
 
-      let protocol: string = TOMConfiguration.websockets ? 'ws://' : 'http://';
-      let address: string = protocol + value.address + ':' + value.port;
       let password = '' + clientId + ':' + replicaId;
 
-      let connection: ReplicaConnection = this.connectTo(address, replicaId, password);
+      // Open connection to replica
+      let connection: ReplicaConnection = this.connectTo(replicaId, password);
       this.sessionTable.set(replicaId, connection);
     });
 
   }
 
-  private connectTo(address: string, replicaId: number, password?: string): ReplicaConnection {
+  /**
+   * Establishes a connection to a specific replica
+   *
+   * @param replicaId id of replica
+   * @param password shared secret for hmacs
+   * @returns {ReplicaConnection} The established connection to the specific replica
+   */
+  private connectTo(replicaId: number, password?: string): ReplicaConnection {
+    let internetAddress: InternetAddress = this.clientViewController.getCurrentView().addresses.get(replicaId);
+    let address: string = this.protocol + internetAddress.address + ':' + internetAddress.port;
     let connection: ReplicaConnection;
     if (this.TOMConfiguration.websockets) {
       let socket: Subject<any> = this.websocketService.createWebsocket(address);
@@ -70,36 +84,45 @@ export class CommunicationSystem implements ICommunicationSystem {
     return connection;
   }
 
-  public send(sign: boolean, targets: number[], sm: TOMMessage, replyReceiver?: ReplyReceiver) {
+
+  /**
+   * Sends a TOMMessage sm to all replicas (broadcast). The replyReceiver is a callback function that will be executed
+   * when the replica's response is obtained. Also attaches hmac to message.
+   *
+   * @param sign not used / implemented currently
+   * @param sm TOMMessage
+   * @param replyReceiver
+   */
+  public send(sign: boolean, sm: TOMMessage, replyReceiver?: ReplyReceiver) {
 
     // Subscribe: When reply is received, parse JSON and execute replyListener
-    this.sessionTable.forEach((connection: ReplicaConnection, replicaId: number) => {
+    this.sessionTable.forEach((connection: ReplicaConnection) => {
       connection.subscribe((reply) => this.receive(reply, replyReceiver, connection));
     });
 
     // Send Message to all replicas
-    this.sessionTable.forEach((connection: ReplicaConnection, replicaId: number) => {
+    this.sessionTable.forEach((connection: ReplicaConnection) => {
 
       // Creates MAC
-      let hmac = '';
-      if (this.TOMConfiguration.useMACs) {
-
-        let secret: string = connection.getSecret();
-        let message: string = JSON.stringify(sm);
-
-        this.log('MESSAGE ', message);
-
-        hmac = CryptoJS.enc.Hex.stringify(CryptoJS.HmacSHA1(message, secret));
-      }
-
+      let hmac = this.TOMConfiguration.useMACs ? connection.computeMAC(JSON.stringify(sm)) : '';
       let message = {data: sm, hmac: hmac};
+
       this.log('send messsage + hmac', message);
+
       connection.send(message);
     });
 
     this.log('send ', sm);
   }
 
+  /**
+   * Receives a reply from the replica and checks if hmac / signature is correct. If so, it will be delivered to
+   * ServiceProxy
+   *
+   * @param reply reply from replica
+   * @param replyReceiver callback function from TOMSender
+   * @param connection connection object between client and replica
+   */
   private receive(reply, replyReceiver: ReplyReceiver, connection: ReplicaConnection) {
 
     let msgReceived = reply;
@@ -111,44 +134,39 @@ export class CommunicationSystem implements ICommunicationSystem {
     if (this.TOMConfiguration.useMACs) {
 
       let hmacReceived = msgReceived.hmac;
-      this.log('RECEIVED HMAC ', hmacReceived);
-      let secret: string = connection.getSecret();
+      this.log('HMAC received', hmacReceived);
       let data: string = JSON.stringify(msgReceived.data);
 
-      this.log('DATA ', data);
-
-      let hmacComputed = CryptoJS.enc.Hex.stringify(CryptoJS.HmacSHA1(data, secret));
-
-      this.log('COMPUTED HMAC ', hmacComputed);
-
-      if (hmacComputed == hmacReceived) {
-        this.log(hmacComputed + ' === ' + hmacReceived);
-      } else {
-        this.log(hmacComputed + ' =/= ' + hmacReceived);
-        // Do NOT deliver message to ServiceProxy when MAC is invalid
+      if (!connection.verifyMAC(data, hmacReceived)) {
+        console.error('HMACs are NOT Matching');
         return;
       }
     }
 
     replyReceiver.replyReceived(msgReceived.data);
-
   }
 
 
-  public setReplyReceiver(replyReceiver: ReplyReceiver) {
-    this.replyReceiver = replyReceiver;
-  }
-
+  /**
+   * Signs the TOMMessage. Currently not implemented
+   * @param sm
+   */
   public sign(sm: TOMMessage) {
     throw new Error('Not yet implemented');
   }
 
+  /**
+   * Closes all connections
+   */
   public close() {
     this.sessionTable.forEach((connection: ReplicaConnection) => {
       connection.close();
     });
   }
 
+  /**
+   * Updates all connections according to the new View
+   */
   public updateConnections() {
 
     if (!this.websocketService) {
@@ -163,7 +181,6 @@ export class CommunicationSystem implements ICommunicationSystem {
 
     let connectionsToAdd: Map<number, InternetAddress> = new Map(newView.addresses);
     let connectionsToRemove: Map<number, InternetAddress> = new Map();
-
 
     for (let i of newView.addresses.keys()) {
       // Connection is both in the old view and in the new view and it's the same connection
@@ -183,22 +200,21 @@ export class CommunicationSystem implements ICommunicationSystem {
     }
 
     // Remove old connections
-    connectionsToRemove.forEach((value: InternetAddress, key: number) => {
+    connectionsToRemove.forEach((internetAddress: InternetAddress, key: number) => {
       this.sessionTable.get(key).close();
       this.sessionTable.delete(key);
       this.log('#### RECONFIG: Removed replica ', key);
     });
 
-
     // Establish and add new connections
-    connectionsToAdd.forEach((value: InternetAddress, replicaId: number) => {
-      let address: string = 'ws://' + value.address + ':' + value.port;
+    connectionsToAdd.forEach((internetAddress: InternetAddress, replicaId: number) => {
       let password = '' + this.clientId + ':' + replicaId;
-      let connection: ReplicaConnection = this.connectTo(address, replicaId, password);
+      let connection: ReplicaConnection = this.connectTo(replicaId, password);
       this.sessionTable.set(replicaId, connection);
       this.log('#### RECONFIG: Added replica ', replicaId);
     });
   }
+
 
   private log(var1, var2?, var3?) {
     if (this.TOMConfiguration.debug) {

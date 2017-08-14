@@ -1,9 +1,9 @@
+import {Replica} from "./Replica";
 
-export interface ReplicaConnection {
+export interface ReplicaConnection extends Replica {
 
   send(message);
   subscribe(callback);
-  getSecret(): string;
   close();
 
 }
