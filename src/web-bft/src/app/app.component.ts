@@ -1,73 +1,18 @@
-import {Component, Input, Output, EventEmitter, OnInit} from '@angular/core';
-import {Subject, Observable, Subscription} from 'rxjs/Rx';
-import {ServiceProxy} from "../bft/tom/ServiceProxy.service";
-import {TOMConfiguration} from "../bft/config/TOMConfiguration";
-import {WebsocketService} from '../bft/communication/Websocket.service';
-import {TOMMessage} from "../bft/tom/messages/TOMMessage";
-import {ReplyListener} from "../bft/communication/ReplyListener.interface";
+import {Component, OnInit} from '@angular/core';
 
 @Component({
   selector: 'app-root',
   templateUrl: './app.component.html',
-  styleUrls: ['./app.component.css'],
-  providers: [ServiceProxy, TOMConfiguration]
+  styleUrls: ['./app.component.css']
+
 })
-export class AppComponent implements OnInit, ReplyListener {
-  @Input() count = 0;
-  @Output() countChange = new EventEmitter<number>();
+export class AppComponent implements OnInit {
 
-  title = 'Web-BFT Demo!';
-  color = 'accent';
-
-  counterSubscription: Subscription;
-
-  message: string;
-  sentMessage: string;
-
-  counterValue: number = 0;
-  counter: Observable<any>;
-
-
-  constructor(private counterProxy: ServiceProxy) {
+  constructor() {
 
   }
 
   ngOnInit() {
-
-  }
-
-  replyReceived(sm: TOMMessage) {
-    this.count = parseInt(sm.content, 16);
-    this.message = "" + this.count;
-  }
-
-  launchCounter() {
-
-    // Counter already initialized
-    if (this.counterSubscription) {
-      this.counterSubscription.unsubscribe();
-    }
-
-    this.counter = Observable.interval(0);
-    this.counterSubscription = this.counter.subscribe((num) => {
-      this.countChange.emit(this.counterValue);
-      this.sentMessage = "" + this.counterValue;
-      if (this.counterValue == 0) {
-        this.counterProxy.invokeUnordered(this.counterValue, this)
-      } else {
-        this.counterProxy.invokeOrdered(this.counterValue, this);
-      }
-
-    });
-
-
-  }
-
-  haltCounter() {
-
-    if (this.counterSubscription) {
-      this.counterSubscription.unsubscribe();
-    }
 
   }
 
