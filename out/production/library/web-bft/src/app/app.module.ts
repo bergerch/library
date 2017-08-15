@@ -4,19 +4,26 @@ import { NgModule } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { HttpModule } from '@angular/http';
 import { WebsocketService } from '../bft/communication/Websocket.service';
-
+import { routing } from './app.routes';
 
 import { AppComponent } from './app.component';
+import {Counter} from "./CounterDemo/counter.component";
+import {RouterModule} from "@angular/router";
+import {Editor} from "./CollaborativeEditor/editor.component";
 
 @NgModule({
   declarations: [
-    AppComponent
+    AppComponent,
+    Counter,
+    Editor
   ],
   imports: [
     MaterialModule.forRoot(),
     BrowserModule,
     FormsModule,
-    HttpModule
+    HttpModule,
+    routing,
+    RouterModule
   ],
   providers: [WebsocketService],
   bootstrap: [AppComponent]

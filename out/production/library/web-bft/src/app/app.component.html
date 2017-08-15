@@ -1,29 +1,15 @@
-<md-toolbar color="primary">
+<md-toolbar color="primary" y-Position="above">
 
-  <span>{{title}}</span>
-
-  <button md-icon-button [md-menu-trigger-for]="menu">
-    <md-icon>more_vert</md-icon>
-  </button>
+  <div>
+    <button md-button [routerLink]="['/']">Home</button>
+    <button md-button [routerLink]="['/counter']">Counter</button>
+    <button md-button [routerLink]="['/editor']">Editor</button>
+  </div>
 </md-toolbar>
 
-<md-menu x-position="before" #menu="mdMenu">
-  <button md-menu-item>Option 1</button>
-  <button md-menu-item>Option 2</button>
-</md-menu>
+<!-- Router Outlet -->
+<div class="container">
+  <router-outlet></router-outlet>
+</div>
 
-<md-card>
 
-  <md-input-container>
-    <input mdInput placeholder="Counter Increment" [(ngModel)]="counterValue">
-  </md-input-container>
-
-  <button md-raised-button color="accent" (click)="launchCounter()">Launch Counter</button>
-  <button md-raised-button color="primary" (click)="haltCounter()">Halt Counter</button>
-  <p>
-    Increment: {{sentMessage}}
-  </p>
-  <p>
-    Counter: {{message}}
-  </p>
-</md-card>

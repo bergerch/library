@@ -41,7 +41,7 @@ export class TOMConfiguration {
 
 
   // If websockets should be used or simple http
-  websockets = false;
+  websockets = true;
 
   /** Reconfiguration Configurations */
 
@@ -106,7 +106,7 @@ export class TOMConfiguration {
   useMACs = true;
 
   // Set to 1 if SMaRt should use the standard output to display debug messages, set to 0 if otherwise
-  debug = false;
+  debug = true;
 
   // Print information about the replica when it is shutdown
   shutdownhook = true;

@@ -3,12 +3,13 @@
  */
 
 import {Injectable} from '@angular/core';
-import {CommunicationSystem, ICommunicationSystem} from "../communication/CommunicationSystem.service";
+import {CommunicationSystem} from "../communication/CommunicationSystem.service";
 import {ClientViewController} from "../reconfiguration/ClientViewController.controller";
 import {TOMConfiguration} from "../config/TOMConfiguration";
 import {TOMMessage} from "./messages/TOMMessage";
 import {TOMMessageType} from "./messages/TOMMessageType";
 import {Http} from "@angular/http";
+import {ICommunicationSystem} from "../communication/ICommunicationSystem.interface";
 
 
 export interface ReplyReceiver {

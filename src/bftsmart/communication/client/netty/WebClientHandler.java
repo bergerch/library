@@ -67,7 +67,7 @@ public abstract class WebClientHandler extends ChannelInboundHandlerAdapter {
                     }
 
                     // Generate the HMAC for the data to be transmitted
-                    String dataString = tomMessageJSON.getData().toJSONString();
+                    String dataString = tomMessageJSON.getDataString();
                     byte[] hmacComputedBytes = macSend.doFinal(dataString.getBytes());
                     String hmacHexString = DatatypeConverter.printHexBinary(hmacComputedBytes);
                     hmac = hmacHexString.toLowerCase();

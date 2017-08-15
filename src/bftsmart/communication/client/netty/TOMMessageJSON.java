@@ -147,8 +147,13 @@ public class TOMMessageJSON {
         } else {
 
             byte[] reply = sm.getContent();
-            content = DatatypeConverter.printHexBinary(reply);
+            content = new String(reply);
+            //content = DatatypeConverter.printHexBinary(reply);
         }
+
+
+        //{"sequence":1,"viewId":0,"sender":3,"session":0,"operationId":-1,"type":0,"content":"a<div><br></div>"}
+        dataString = "{\"sequence\":"+sequence+",\"viewId\":"+view+",\"sender\":"+sender+",\"session\":"+session+",\"operationId\":"+operationId+",\"type\":"+type+",\"content\":"+"\""+content+"\""+"}";
 
         // Create JSON TOM Message
         data = new JSONObject();
@@ -159,6 +164,7 @@ public class TOMMessageJSON {
         data.put("viewId", new Integer(view));
         data.put("type", new Integer(type));
         data.put("content", content);
+
 
     }
 
@@ -197,7 +203,9 @@ public class TOMMessageJSON {
             msg.put("hmac", hmac);
         }
 
-        return msg.toJSONString();
+        String msgString = "{\"data\":"+dataString+",\"hmac\":"+"\""+hmac+"\""+"}";
+
+        return msgString;
     }
 
     /**

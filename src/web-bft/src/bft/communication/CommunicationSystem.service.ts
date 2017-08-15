@@ -139,6 +139,10 @@ export class CommunicationSystem implements ICommunicationSystem {
 
       if (!connection.verifyMAC(data, hmacReceived)) {
         console.error('HMACs are NOT Matching');
+        console.error('HMAC received: ', hmacReceived);
+        console.error('hmac computed: ', connection.computeMAC(data));
+        console.error('data received: ', data);
+        console.error('secret ', this.clientId + ':' + connection.getReplicaId());
         return;
       }
     }
