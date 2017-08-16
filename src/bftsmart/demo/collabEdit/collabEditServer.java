@@ -3,20 +3,22 @@ package bftsmart.demo.collabEdit;
 import bftsmart.tom.MessageContext;
 import bftsmart.tom.ReplicaContext;
 import bftsmart.tom.ServiceReplica;
+import bftsmart.tom.core.messages.TOMMessage;
+import bftsmart.tom.server.Replier;
 import bftsmart.tom.server.defaultservices.DefaultRecoverable;
 
 import java.io.*;
 
 
-public class collabEditServer extends DefaultRecoverable {
+public class collabEditServer extends DefaultRecoverable implements Replier {
 
     private ReplicaContext rc;
     ServiceReplica replica = null;
 
     private String document = "Hello World!";
 
-    // int[] subscriber = new int[100];
-    // int subscriptionCount = 0;
+    int[] subscribers = new int[100];
+    int subscriptionCount = 0;
 
     public collabEditServer(int id) {
         replica = new ServiceReplica(id, this, this);
@@ -110,25 +112,32 @@ public class collabEditServer extends DefaultRecoverable {
         }
     }
 
-    /*
+
     @Override
     public void manageReply(TOMMessage request, MessageContext msgCtx) {
-        boolean contains = false;
-        for (int i = 0; i < subscriptionCount; i++) {
-            if (subscriber[i] == request.getSender()) {
-                contains = true;
-            }
-        }
-        if (!contains) {
-            subscriber[subscriptionCount] = request.getSender();
-            subscriptionCount++;
-        }
-        rc.getServerCommunicationSystem().send(subscriber, request.reply);
+        this.subscribe(request.getSender());
+        System.out.println("Manage Reply called, subscribers: " + subscribers);
+        rc.getServerCommunicationSystem().send(subscribers, request.reply);
     }
 
     @Override
     public void setReplicaContext(ReplicaContext rc) {
+        super.setReplicaContext(rc);
         this.rc = rc;
     }
-    */
+
+    private void subscribe(int sender) {
+        boolean contains = false;
+        for (int i = 0; i < subscriptionCount; i++) {
+            if (subscribers[i] == sender) {
+                contains = true;
+            }
+        }
+        if (!contains) {
+            subscribers[subscriptionCount] = sender;
+            subscriptionCount++;
+        }
+
+    }
+
 }

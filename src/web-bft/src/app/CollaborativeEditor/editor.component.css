@@ -27,12 +27,16 @@
 }
 
 .doc .doc__text-editor {
-  width: 60%;
+  width: 90%;
+  max-width: 794px;
   padding: 40px 28px;
+  height: 930px;
   min-height: 500px;
   background: #fff;
   margin: 0 auto;
   transform: translateY(-150px);
   text-align: left;
 
+}:focus {
+  outline: none;
 }
