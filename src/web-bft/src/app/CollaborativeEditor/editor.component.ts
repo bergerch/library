@@ -18,7 +18,7 @@ export class Editor implements OnInit, ReplyListener {
   editorObservable: Observable<any>;
   editorSubscription: Subscription;
 
-  cursorChanged;
+  cursorPosition;
 
   range;
 
@@ -29,6 +29,7 @@ export class Editor implements OnInit, ReplyListener {
   ngOnInit() {
     this.editor = document.getElementById('editor');
     this.editor.focus();
+
     this.editor.addEventListener('input', (e) => {
       let write = e.target.innerHTML;
       console.log('Write ', write);
@@ -41,26 +42,27 @@ export class Editor implements OnInit, ReplyListener {
     this.editorSubscription = this.editorObservable.subscribe((num) => {
       this.editorProxy.invokeUnordered(read, this)
     });
+
+
   }
 
 
   replyReceived(sm: TOMMessage) {
 
     let cursorPosition = this.getCurrentCursorPosition('editor');
+    console.log(cursorPosition);
+
+    if (cursorPosition != -1)
+      this.cursorPosition = cursorPosition;
 
     let buff = new Buffer(sm.content);
-    console.log(buff.toString('utf8'));
     if (this.editor.innerHTML != buff.toString('utf8')) {
-      console.log('!=')
-      console.log(this.editor.innerHTML);
-      console.log(buff.toString('utf8'));
+      console.log("Apply Changes ...");
       this.editor.innerHTML = buff.toString('utf8');
-      this.setCurrentCursorPosition(cursorPosition);
+      this.editor.focus();
+      this.setCurrentCursorPosition(this.cursorPosition);
+
     }
-
-
-
-
 
 
   }
