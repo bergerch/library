@@ -1,15 +1,14 @@
-<md-card>
+<md-card class="counter">
 
   <md-input-container>
-    <input mdInput placeholder="Counter Increment" [(ngModel)]="counterValue">
-  </md-input-container>
+    <input mdInput placeholder="Increment" [(ngModel)]="counterValue">
+  </md-input-container> <br>
 
-  <button md-raised-button color="accent" (click)="launchCounter()">Launch Counter</button>
-  <button md-raised-button color="primary" (click)="haltCounter()">Halt Counter</button>
-  <p>
-    Increment: {{sentMessage}}
-  </p>
   <p>
     Counter: {{message}}
   </p>
+
+  <button md-raised-button flex (click)="launchCounter()">Start | Stop</button>
+
+
 </md-card>

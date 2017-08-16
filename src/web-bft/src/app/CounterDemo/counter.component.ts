@@ -37,7 +37,7 @@ export class Counter implements OnInit, ReplyListener {
   }
 
   replyReceived(sm: TOMMessage) {
-    this.count = parseInt(sm.content, 16);
+    this.count = sm.content;
     this.message = "" + this.count;
   }
 
@@ -46,12 +46,15 @@ export class Counter implements OnInit, ReplyListener {
     // Counter already initialized
     if (this.counterSubscription) {
       this.counterSubscription.unsubscribe();
+      this.counterSubscription = null;
+      return;
     }
 
-    this.counter = Observable.interval(0);
+    this.counter = Observable.interval();
     this.counterSubscription = this.counter.subscribe((num) => {
       this.countChange.emit(this.counterValue);
       this.sentMessage = "" + this.counterValue;
+
       if (this.counterValue == 0) {
         this.counterProxy.invokeUnordered(this.counterValue, this)
       } else {

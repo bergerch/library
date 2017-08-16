@@ -63,14 +63,8 @@ public final class CounterServer extends DefaultRecoverable {
 
         iterations++;
         System.out.println("(" + iterations + ") Reading counter at value: " + counter);
-        try {
-            ByteArrayOutputStream out = new ByteArrayOutputStream(4);
-            new DataOutputStream(out).writeInt(counter);
-            return out.toByteArray();
-        } catch (IOException ex) {
-            System.err.println("Invalid request received!");
-            return new byte[0];
-        }
+        String result = "" + counter;
+        return result.getBytes();
     }
 
     private byte[] executeSingle(byte[] command, MessageContext msgCtx) {
@@ -96,15 +90,10 @@ public final class CounterServer extends DefaultRecoverable {
         } else {
             System.out.println("(" + iterations + ") Counter was incremented: " + counter);
         }
-        ByteArrayOutputStream out = new ByteArrayOutputStream(4);
-        try {
-            new DataOutputStream(out).writeInt(counter);
-            return out.toByteArray();
-        } catch (IOException e) {
-            e.printStackTrace();
-            System.err.println("Invalid request received!");
-            return new byte[0];
-        }
+
+       String result = "" + counter;
+
+       return result.getBytes();
     }
 
 
