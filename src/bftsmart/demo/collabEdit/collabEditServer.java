@@ -21,7 +21,7 @@ public class collabEditServer extends DefaultRecoverable implements Replier {
     int subscriptionCount = 0;
 
     public collabEditServer(int id) {
-        replica = new ServiceReplica(id, this, this);
+        replica = new ServiceReplica(id, this, this, null, this);
     }
 
     public static void main(String[] args) {
@@ -116,7 +116,11 @@ public class collabEditServer extends DefaultRecoverable implements Replier {
     @Override
     public void manageReply(TOMMessage request, MessageContext msgCtx) {
         this.subscribe(request.getSender());
-        System.out.println("Manage Reply called, subscribers: " + subscribers);
+        System.out.print("Manage Reply called, subscribers: ");
+        for(int i = 0; i < subscriptionCount; i++) {
+            System.out.print(subscribers[i] + ", ");
+        }
+        System.out.print("\n");
         rc.getServerCommunicationSystem().send(subscribers, request.reply);
     }
 

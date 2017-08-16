@@ -311,6 +311,7 @@ public class NettyClientServerCommunicationSystemServerSide extends SimpleChanne
 			webClientHandler.send(webClientReceivers, sm);
 		}
 
+		// FIXME
 		if (targetsNetty.size() == 0) {
 			return;
 		}
@@ -322,8 +323,10 @@ public class NettyClientServerCommunicationSystemServerSide extends SimpleChanne
 			k++;
 		}
 
+		/*
 
-		//serialize message
+		//serialize
+		// message
 		DataOutputStream dos = null;
 
 		byte[] data = null;
@@ -416,7 +419,7 @@ public class NettyClientServerCommunicationSystemServerSide extends SimpleChanne
 				//sendLock.unlock();
 				rl.readLock().unlock();
 			}
-		}
+		}*/
 
 
 	}

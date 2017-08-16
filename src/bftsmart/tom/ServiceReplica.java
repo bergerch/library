@@ -453,9 +453,10 @@ public class ServiceReplica {
                 if (SVController.getStaticConf().getNumRepliers() > 0) {
                     bftsmart.tom.util.Logger.println("(ServiceReplica.receiveMessages) sending reply to " + request.getSender() + " with sequence number " + request.getSequence() +" via ReplyManager");
                     repMan.send(request);
+
                 } else {
                     bftsmart.tom.util.Logger.println("(ServiceReplica.receiveMessages) sending reply to " + request.getSender() + " with sequence number " + request.getSequence());
-                    cs.send(new int[]{request.getSender()}, request.reply);
+                    replier.manageReply(request, msgContexts[index]);
                 }
             }
             //DEBUG
@@ -466,8 +467,6 @@ public class ServiceReplica {
     /**
      * This method initializes the object
      *
-     * @param cs Server side communication System
-     * @param conf Total order messaging configuration
      */
     private void initTOMLayer() {
         if (tomStackCreated) { // if this object was already initialized, don't do it again
