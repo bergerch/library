@@ -28,6 +28,8 @@ export class ServiceProxy extends TOMSender implements ReplyReceiver {
   invokeUnorderedHashedTimeout: number = 10;
 
   replyListeners: Map<number, ReplyListener> = new Map();
+  subscriptions: Map<number, ReplyListener> = new Map();
+
   replies: Map<number, TOMMessage[]> = new Map();
   hashResponseControllers: Map<number, HashResponseController> = new Map();
 
@@ -133,6 +135,7 @@ export class ServiceProxy extends TOMSender implements ReplyReceiver {
     if (sameContent >= replyQuorum) {
       let response = this.extractor.extractResponse(replies, sameContent, lastReceived);
       this.log('validated ', response);
+
       this.replies.delete(response.sequence);
       this.replyListeners.get(response.sequence).replyReceived(response);
       this.replyListeners.delete(response.sequence);

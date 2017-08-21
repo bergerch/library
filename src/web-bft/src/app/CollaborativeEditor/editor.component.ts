@@ -38,7 +38,7 @@ export class Editor implements OnInit, ReplyListener {
     });
     let read = '';
     console.log('Read ', read);
-    this.editorObservable = Observable.interval(5000);
+    this.editorObservable = Observable.interval(300);
     this.editorSubscription = this.editorObservable.subscribe((num) => {
       this.editorProxy.invokeUnordered(read, this)
     });
