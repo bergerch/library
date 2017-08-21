@@ -115,13 +115,17 @@ public class collabEditServer extends DefaultRecoverable implements Replier {
 
     @Override
     public void manageReply(TOMMessage request, MessageContext msgCtx) {
+
+       /*
         this.subscribe(request.getSender());
         System.out.print("Manage Reply called, subscribers: ");
         for(int i = 0; i < subscriptionCount; i++) {
             System.out.print(subscribers[i] + ", ");
         }
         System.out.print("\n");
-        rc.getServerCommunicationSystem().send(subscribers, request.reply);
+        rc.getServerCommunicationSystem().send(subscribers, request.reply); */
+
+        rc.getServerCommunicationSystem().send(new int[]{request.getSender()}, request.reply);
     }
 
     @Override
