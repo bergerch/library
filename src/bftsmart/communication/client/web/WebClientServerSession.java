@@ -1,4 +1,4 @@
-package bftsmart.communication.client.netty;
+package bftsmart.communication.client.web;
 
 import io.netty.channel.ChannelHandlerContext;
 

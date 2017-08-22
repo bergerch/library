@@ -1,5 +1,6 @@
-package bftsmart.communication.client.netty;
+package bftsmart.communication.client.web;
 
+import bftsmart.communication.client.netty.NettyClientServerCommunicationSystemServerSide;
 import bftsmart.reconfiguration.util.TOMConfiguration;
 import bftsmart.tom.core.messages.TOMMessage;
 import bftsmart.tom.util.Logger;

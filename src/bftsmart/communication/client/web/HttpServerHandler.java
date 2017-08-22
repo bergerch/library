@@ -1,6 +1,7 @@
-package bftsmart.communication.client.netty;
+package bftsmart.communication.client.web;
 
 import bftsmart.communication.client.CommunicationSystemServerSide;
+import bftsmart.communication.client.netty.NettyClientServerCommunicationSystemServerSide;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.*;

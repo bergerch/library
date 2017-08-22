@@ -15,6 +15,9 @@ limitations under the License.
  */
 package bftsmart.communication.client.netty;
 
+import bftsmart.communication.client.web.HttpInitializer;
+import bftsmart.communication.client.web.WebClientHandler;
+import bftsmart.communication.client.web.WebClientServerSession;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
@@ -28,9 +31,6 @@ import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 
-import java.io.ByteArrayOutputStream;
-import java.io.DataOutputStream;
-import java.io.IOException;
 import java.net.ConnectException;
 import java.net.InetSocketAddress;
 import java.nio.channels.ClosedChannelException;

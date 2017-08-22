@@ -1,6 +1,7 @@
-package bftsmart.communication.client.netty;
+package bftsmart.communication.client.web;
 
 import bftsmart.communication.client.CommunicationSystemServerSide;
+import bftsmart.communication.client.netty.NettyClientServerCommunicationSystemServerSide;
 import bftsmart.tom.util.Logger;
 
 import io.netty.channel.ChannelHandlerContext;

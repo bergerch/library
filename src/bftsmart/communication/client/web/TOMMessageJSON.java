@@ -1,4 +1,4 @@
-package bftsmart.communication.client.netty;
+package bftsmart.communication.client.web;
 
 import bftsmart.reconfiguration.views.View;
 import bftsmart.tom.core.messages.TOMMessage;
@@ -10,7 +10,6 @@ import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
 
-import javax.xml.bind.DatatypeConverter;
 import java.net.InetSocketAddress;
 import java.util.Map;
 
