@@ -13,10 +13,11 @@ export class TOMMessage extends SystemMessage {
   operationId: number; // Sequence number defined by the client
   content: any; // Content of the message
 
+  event: string;
   replyServer: number = -1;
 
   public constructor(sender: number, session: number, reqId: number, operationId: number, request: any, viewId: number,
-                     requestType: TOMMessageType) {
+                     requestType: TOMMessageType, event?: string) {
     super(sender);
     this.session = session;
     this.sequence = reqId;
@@ -24,6 +25,10 @@ export class TOMMessage extends SystemMessage {
     this.content = request;
     this.viewId = viewId;
     this.type = requestType;
+
+    if (event) {
+      this.event = event;
+    }
   }
 
 

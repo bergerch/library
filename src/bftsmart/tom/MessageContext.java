@@ -43,6 +43,7 @@ public class MessageContext implements Serializable {
     private final int operationId;
     private final int replyServer;
     private final  byte[] signature;
+    private final String event;
     
     // Consensus info
     private final long timestamp;
@@ -85,7 +86,7 @@ public class MessageContext implements Serializable {
     public MessageContext(int sender, int viewID, TOMMessageType type,
             int session, int sequence, int operationId, int replyServer, byte[] signature,
             long timestamp, int numOfNonces, long seed, int regency, int leader, int consensusId,
-            Set<ConsensusMessage> proof, TOMMessage firstInBatch, boolean noOp) {
+            Set<ConsensusMessage> proof, TOMMessage firstInBatch, boolean noOp, String event) {
         
         this.nonces = null;
                
@@ -108,7 +109,10 @@ public class MessageContext implements Serializable {
         this.proof = proof;
         this.firstInBatch = firstInBatch;
         this.noOp = noOp;
+        this.event = event;
     }
+
+
 
     public static long getSerialVersionUID() {
         return serialVersionUID;
@@ -229,6 +233,10 @@ public class MessageContext implements Serializable {
 
     public boolean isNoOp() {
         return noOp;
+    }
+
+    public String getEvent() {
+        return event;
     }
     
     /**

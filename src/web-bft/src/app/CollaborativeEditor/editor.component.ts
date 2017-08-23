@@ -21,6 +21,7 @@ export class Editor implements OnInit, ReplyListener {
   cursorPosition;
 
   range;
+  subscribed: boolean;
 
   constructor(private editorProxy: ServiceProxy) {
   }
@@ -40,8 +41,14 @@ export class Editor implements OnInit, ReplyListener {
     console.log('Read ', read);
     this.editorObservable = Observable.interval(300);
     this.editorSubscription = this.editorObservable.subscribe((num) => {
-      this.editorProxy.invokeUnordered(read, this)
+      //this.editorProxy.invokeUnordered(read, this)
+
+      if (!this.subscribed) {
+        this.editorProxy.invokeOrderedSubscribe('subscribe', this, 'onDocChange');
+        this.subscribed = true;
+      }
     });
+
 
 
   }

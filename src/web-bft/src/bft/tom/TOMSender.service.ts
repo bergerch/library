@@ -116,10 +116,10 @@ export abstract class TOMSender implements Closeable {
    * @param reqId unique integer that identifies this request
    * @param reqType TOM_NORMAL, TOM_READONLY or TOM_RECONFIGURATION
    */
-  public TOMulticastData(m: any, reqId: number, reqType: TOMMessageType, operationsId?: number, replyReceiver?: ReplyReceiver) {
+  public TOMulticastData(m: any, reqId: number, reqType: TOMMessageType, operationsId?: number, replyReceiver?: ReplyReceiver, event?: string) {
     let operatId = operationsId ? operationsId : -1;
     this.cs.send(this.useSignatures,
-      new TOMMessage(this.me, this.session, reqId, operatId, m, this.getViewController().getCurrentView().id, reqType),
+      new TOMMessage(this.me, this.session, reqId, operatId, m, this.getViewController().getCurrentView().id, reqType, event),
       replyReceiver);
   }
 

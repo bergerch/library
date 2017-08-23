@@ -28,7 +28,7 @@ export class ServiceProxy extends TOMSender implements ReplyReceiver {
   invokeUnorderedHashedTimeout: number = 10;
 
   replyListeners: Map<number, ReplyListener> = new Map();
-  subscriptions: Map<number, ReplyListener> = new Map();
+  subscriptions: Map<string, ReplyListener> = new Map();
 
   replies: Map<number, TOMMessage[]> = new Map();
   hashResponseControllers: Map<number, HashResponseController> = new Map();
@@ -112,7 +112,6 @@ export class ServiceProxy extends TOMSender implements ReplyReceiver {
         })
       }
 
-      this.log('Hosts ', hosts);
       let view: View = new View(reply.content.id, reply.content.processes, reply.content.f, hosts);
       this.reconfigureTo(view);
       return;
@@ -131,23 +130,31 @@ export class ServiceProxy extends TOMSender implements ReplyReceiver {
       }
     }
 
+
     // When response passes quorum, deliver it to application via replyListener
     if (sameContent >= replyQuorum) {
-      let response = this.extractor.extractResponse(replies, sameContent, lastReceived);
+      let response: TOMMessage = this.extractor.extractResponse(replies, sameContent, lastReceived);
       this.log('validated ', response);
 
+      // Check if response is a subscription response, ergo was published by the server
+      if (response.event && response.event != 'null') {
+        this.subscriptions.get(response.event).replyReceived(response);
+      } else {
+        // Normal request/response behaviour
+        this.replyListeners.get(response.sequence).replyReceived(response);
+        this.replyListeners.delete(response.sequence);
+      }
       this.replies.delete(response.sequence);
-      this.replyListeners.get(response.sequence).replyReceived(response);
-      this.replyListeners.delete(response.sequence);
+
     }
 
   }
 
-  public invokeOrdered(request, replyListener?: ReplyListener): any {
+  public invokeOrdered(request, replyListener: ReplyListener): any {
     return this.invoke(request, TOMMessageType.ORDERED_REQUEST, replyListener);
   }
 
-  public invokeUnordered(request, replyListener?: ReplyListener): any {
+  public invokeUnordered(request, replyListener: ReplyListener): any {
     return this.invoke(request, TOMMessageType.UNORDERED_REQUEST, replyListener);
   }
 
@@ -155,6 +162,18 @@ export class ServiceProxy extends TOMSender implements ReplyReceiver {
     // TODO
     throw new Error("not yet implemented")
     //return this.invoke(request, TOMMessageType.UNORDERED_HASHED_REQUEST, replyListener);
+  }
+
+  public invokeOrderedSubscribe(request, replyListener: ReplyListener, event: string): any {
+    return this.invoke(request, TOMMessageType.ORDERED_REQUEST, replyListener, event);
+  }
+
+  public invokeOrderedUnsubscribe(request, replyListener: ReplyListener, event: string): any {
+    return this.invoke(request, TOMMessageType.ORDERED_REQUEST, replyListener, event);
+  }
+
+  public invokeOrderedUnsubscribeAll(request, event: string): any {
+    return this.invoke(request, TOMMessageType.ORDERED_REQUEST, null, event);
   }
 
 
@@ -165,13 +184,17 @@ export class ServiceProxy extends TOMSender implements ReplyReceiver {
    * @param reqType type of request e.g. ordered, unordered
    * @param replyListener application defined callback, will be executed when response is obtained
    */
-  private invoke(request, reqType: number, replyListener?: ReplyListener): any {
+  private invoke(request, reqType: number, replyListener?: ReplyListener, event?: string): any {
 
-    // Clear all statefull data to prepare for receiving next replies
+    // Clear all stateful data to prepare for receiving next replies
 
     this.reqId = this.generateRequestId(reqType);
 
-    this.replyListeners.set(this.reqId, replyListener);
+    if (event) {
+      this.subscriptions.set(event, replyListener)
+    } else {
+      this.replyListeners.set(this.reqId, replyListener);
+    }
 
     this.operationId = this.generateOperationId();
 
@@ -200,7 +223,7 @@ export class ServiceProxy extends TOMSender implements ReplyReceiver {
 
     } else {
 
-      this.TOMulticastData(request, this.reqId, reqType, this.operationId, this);
+      this.TOMulticastData(request, this.reqId, reqType, this.operationId, this, event);
 
     }
 
@@ -215,7 +238,7 @@ export class ServiceProxy extends TOMSender implements ReplyReceiver {
     let f: number = this.getViewController().getCurrentViewN();
 
     // formula for quorum is [(n+f)/2]+1
-    let replyQuorum = Math.ceil((n + f) / 2) + 1;
+    let replyQuorum = Math.floor((n + f) / 2) + 1;
     return replyQuorum;
   }
 
@@ -242,7 +265,7 @@ export class ServiceProxy extends TOMSender implements ReplyReceiver {
 
   private log(var1, var2?, var3?) {
     if (this.TOMConfiguration.debug) {
-      if(var3)
+      if (var3)
         console.log(var1, var2, var3);
       else if (var2)
         console.log(var1, var2);

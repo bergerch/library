@@ -4,6 +4,7 @@ import bftsmart.tom.MessageContext;
 import bftsmart.tom.ReplicaContext;
 import bftsmart.tom.ServiceReplica;
 import bftsmart.tom.core.messages.TOMMessage;
+import bftsmart.tom.core.messages.TOMMessageType;
 import bftsmart.tom.server.Replier;
 import bftsmart.tom.server.defaultservices.DefaultRecoverable;
 
@@ -22,6 +23,10 @@ public class collabEditServer extends DefaultRecoverable implements Replier {
 
     public collabEditServer(int id) {
         replica = new ServiceReplica(id, this, this, null, this);
+
+        for (int i = 0; i < subscribers.length; i++) {
+            subscribers[i] = -1;
+        }
     }
 
     public static void main(String[] args) {
@@ -39,7 +44,7 @@ public class collabEditServer extends DefaultRecoverable implements Replier {
         for (int i = 0; i < commands.length; i++) {
             if (msgCtxs != null && msgCtxs[i] != null) {
                 replies[i] = executeSingle(commands[i], msgCtxs[i]);
-            } else executeSingle(commands[i], null);
+            } else replies[i] = executeSingle(commands[i], null);
         }
 
         return replies;
@@ -54,8 +59,27 @@ public class collabEditServer extends DefaultRecoverable implements Replier {
 
     private byte[] executeSingle(byte[] command, MessageContext msgCtx) {
 
-        System.out.println(" Apply changes to document " + document);
 
+        // If its a subscription
+        String event = msgCtx.getEvent();
+        if (event != null && event.equals("onDocChange")) {
+            String operation = new String(command);
+            System.out.println(" Received event " + event + "from " + msgCtx.getSender() + " with operation " + operation);
+            switch (operation) {
+                case "subscribe":
+                    addSubscriber(msgCtx.getSender(), event);
+                    System.out.println(" Added subscriber " + msgCtx.getSender() + " for event " + event);
+                    break;
+                case "unsubscribe":
+                    removeSubscriber(msgCtx.getSender(), event);
+                    System.out.println(" Added subscriber " + msgCtx.getSender() + " for event " + event);
+                    break;
+            }
+            return documentToByte();
+        }
+
+        // If its changes to the document
+        System.out.println(" Apply changes to document " + document);
         try {
             String changedDoc = new String(command, "UTF-8");
             this.document = changedDoc;
@@ -70,6 +94,9 @@ public class collabEditServer extends DefaultRecoverable implements Replier {
     @SuppressWarnings("unchecked")
     @Override
     public void installSnapshot(byte[] state) {
+
+        // FIXME
+
         try {
             System.out.println("setState called");
             ByteArrayInputStream bis = new ByteArrayInputStream(state);
@@ -85,6 +112,10 @@ public class collabEditServer extends DefaultRecoverable implements Replier {
 
     @Override
     public byte[] getSnapshot() {
+
+        // FIXME
+
+
         try {
             System.out.println("getState called");
             ByteArrayOutputStream bos = new ByteArrayOutputStream();
@@ -116,16 +147,11 @@ public class collabEditServer extends DefaultRecoverable implements Replier {
     @Override
     public void manageReply(TOMMessage request, MessageContext msgCtx) {
 
-       /*
-        this.subscribe(request.getSender());
-        System.out.print("Manage Reply called, subscribers: ");
-        for(int i = 0; i < subscriptionCount; i++) {
-            System.out.print(subscribers[i] + ", ");
-        }
-        System.out.print("\n");
-        rc.getServerCommunicationSystem().send(subscribers, request.reply); */
+        if (request.getReqType() == TOMMessageType.ORDERED_REQUEST)
+            request.reply.setEvent("onDocChange");
 
-        rc.getServerCommunicationSystem().send(new int[]{request.getSender()}, request.reply);
+        rc.getServerCommunicationSystem().send(subscribers, request.reply);
+
     }
 
     @Override
@@ -134,7 +160,44 @@ public class collabEditServer extends DefaultRecoverable implements Replier {
         this.rc = rc;
     }
 
-    private void subscribe(int sender) {
+    public String printSubscriber() {
+
+        String s = "[";
+
+        for (int i = 0; i < subscriptionCount; i++) {
+
+            s = s + ", " + subscribers[i];
+        }
+
+        s += "]";
+
+        return s;
+    }
+
+
+    private void removeSubscriber(int sender, String event) {
+
+
+        boolean removed = false;
+        for (int i = 0; i < subscriptionCount; i++) {
+            if (subscribers[i] == sender) {
+
+                subscribers[i] = i == subscriptionCount - 1 ? -1 : subscribers[i + 1];
+                removed = true;
+            }
+            if (removed) {
+                subscribers[i] = i == subscriptionCount - 1 ? -1 : subscribers[i + 1];
+            }
+        }
+        subscriptionCount = removed ? subscriptionCount-- : subscriptionCount;
+
+        System.out.println("Now subscribers are " + printSubscriber());
+
+    }
+
+    private void addSubscriber(int sender, String event) {
+
+
         boolean contains = false;
         for (int i = 0; i < subscriptionCount; i++) {
             if (subscribers[i] == sender) {
@@ -146,6 +209,8 @@ public class collabEditServer extends DefaultRecoverable implements Replier {
             subscriptionCount++;
         }
 
+
+        System.out.println("Now subscribers are " + printSubscriber());
     }
 
 }

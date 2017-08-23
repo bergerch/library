@@ -61,6 +61,7 @@ public class TOMMessageJSON {
             int operationId = ((Long) data.get("operationId")).intValue();
             int view = ((Long) data.get("viewId")).intValue();
             TOMMessageType type = TOMMessageType.fromInt(((Long) data.get("type")).intValue());
+            String event = (String) data.get("event");
 
             // Parse content
             byte[] content = data.get("content").toString().getBytes();
@@ -71,7 +72,7 @@ public class TOMMessageJSON {
             dataString = words[0];
 
             // Create the TOM Message
-            tomMsg = new TOMMessage(sender, session, sequence, operationId, content, view, type);
+            tomMsg = new TOMMessage(sender, session, sequence, operationId, content, view, type, event);
             tomMsg.serializedMessage = TOMMessage.messageToBytes(tomMsg);
 
         } catch (ParseException e) {
@@ -97,6 +98,7 @@ public class TOMMessageJSON {
         int view = sm.getViewID();
         int type = sm.getReqType().toInt();
         String content = "";
+        String event = sm.getEvent();
 
         // IF it's a >>>Reconfiguration message<<< (clients view number was not up to date) create message with new VIEW
         if (sm.view_change_response) {
@@ -151,8 +153,15 @@ public class TOMMessageJSON {
         }
 
 
+        if (event != null) {
+            dataString = "{\"sequence\":"+sequence+",\"viewId\":"+view+",\"sender\":"+sender+",\"session\":"+session+",\"operationId\":"+operationId+",\"type\":"+type+",\"content\":"+"\""+content+"\""+",\"event\":"+"\""+event+"\""+"}";
+
+        } else {
+            dataString = "{\"sequence\":"+sequence+",\"viewId\":"+view+",\"sender\":"+sender+",\"session\":"+session+",\"operationId\":"+operationId+",\"type\":"+type+",\"content\":"+"\""+content+"\""+"}";
+
+        }
+
         //{"sequence":1,"viewId":0,"sender":3,"session":0,"operationId":-1,"type":0,"content":"a<div><br></div>"}
-        dataString = "{\"sequence\":"+sequence+",\"viewId\":"+view+",\"sender\":"+sender+",\"session\":"+session+",\"operationId\":"+operationId+",\"type\":"+type+",\"content\":"+"\""+content+"\""+"}";
 
         // Create JSON TOM Message
         data = new JSONObject();
