@@ -21,6 +21,8 @@ public class collabEditServer extends DefaultRecoverable implements Replier {
     int[] subscribers = new int[100];
     int subscriptionCount = 0;
 
+    DiffMatchPatch dmp = new DiffMatchPatch();
+
     public collabEditServer(int id) {
         replica = new ServiceReplica(id, this, this, null, this);
 
