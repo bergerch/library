@@ -18,22 +18,53 @@ export class Editor implements OnInit, ReplyListener {
   editorObservable: Observable<any>;
   editorSubscription: Subscription;
 
+  doc_client;
+
   cursorPosition;
 
   range;
   subscribed: boolean;
 
-  constructor(private editorProxy: ServiceProxy) {
-  }
+  differ;
+
+  dmp;
+
+  constructor(private editorProxy: ServiceProxy) {}
 
 
   ngOnInit() {
+
+    this.differ = this.editor = document.getElementById('differ');
+
+    let DiffMatchPatch = require('diff-match-patch');
+    this.dmp = new DiffMatchPatch();
+
+/*
+    let text1 = 'Eine alte Dame ging mit ihrem Hund spazieren';
+    let text2 = 'Eine alte Dame ging mit ihrem Pferd spazieren';
+
+    let d = this.dmp.diff_main(text1, text2);
+    this.dmp.diff_cleanupSemantic(d);
+    let ds = this.dmp.diff_prettyHtml(d);
+
+
+
+    */
+
     this.editor = document.getElementById('editor');
     this.editor.focus();
 
+    this.doc_client = this.editor.innerHTML;
+
     this.editor.addEventListener('input', (e) => {
       let write = e.target.innerHTML;
-      console.log('Write ', write);
+
+      let d = this.dmp.diff_main(this.doc_client, write);
+      this.dmp.diff_cleanupSemantic(d);
+      let ds = this.dmp.diff_prettyHtml(d);
+      this.differ.innerHTML = ds;
+
+      this.doc_client = write;
 
       this.editorProxy.invokeOrdered(write, this);
     });
