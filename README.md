@@ -18,24 +18,24 @@ Run `ng build` to build the project. The build artifacts will be stored in the `
 
 In TOMConfiguration.ts, the replica set can be configured like this (example):
 
-  /** Hosts Configurations */
+  `/** Hosts Configurations */
 
   hosts: Host[] = [
     {server_id: 0, address: '132.231.1.138', port: 11005},
     {server_id: 1, address: '132.231.1.138', port: 11015},
     {server_id: 2, address: '132.231.1.138', port: 11025},
     {server_id: 3, address: '132.231.1.138', port: 11035}
-  ];
+  ];`
 
 Important (!): the port number should always end with 5, ergo portnumber % 5 == 0
 
 in BFT-SMaRts hosts.config, the ports should look like this: (port numbers ending with a 0)
 
-#server id, address and port (the ids from 0 to n-1 are the service replicas) 
+`#server id, address and port (the ids from 0 to n-1 are the service replicas) 
 0 132.231.1.138 11000
 1 132.231.1.138 11010
 2 132.231.1.138 11020
-3 132.231.1.138 11030
+3 132.231.1.138 11030`
 
 Every replica should have a port number that is at least +10 to the last one. 
 The reason for this is, that multiple ports are used by a replica.
