@@ -42,7 +42,7 @@ The reason for this is, that multiple ports are used by a replica.
 
 ## Running the Demo
 
-As a Demo, a collaborative was implemented. The following steps are necessary to test
+As a Demo, a collaborative editor was implemented. The following steps are necessary to test
 
 1) For n replica: in BFT-SMaRt demo folder, run CollabEditServer and suply  the replica ID as program argument eg 0,1,2,3
 
