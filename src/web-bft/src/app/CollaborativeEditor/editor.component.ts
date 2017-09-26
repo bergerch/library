@@ -80,8 +80,6 @@ export class Editor implements OnInit, ReplyListener {
       }
     });
 
-
-
   }
 
 

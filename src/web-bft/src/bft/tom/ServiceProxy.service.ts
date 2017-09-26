@@ -126,7 +126,7 @@ export class ServiceProxy extends TOMSender implements ReplyReceiver {
         other.viewId === reply.viewId &&
         other.operationId === reply.operationId &&
         other.sequence === reply.sequence) {
-        sameContent++;
+         sameContent++;
       }
     }
 
@@ -137,17 +137,17 @@ export class ServiceProxy extends TOMSender implements ReplyReceiver {
       this.log('validated ', response);
 
       // Check if response is a subscription response, ergo was published by the server
-      if (response.event && response.event != 'null') {
+      if (response.event && response.event != 'null' && this.subscriptions.get(response.event)) {
         this.subscriptions.get(response.event).replyReceived(response);
       } else {
         // Normal request/response behaviour
-        this.replyListeners.get(response.sequence).replyReceived(response);
-        this.replyListeners.delete(response.sequence);
+        if (this.replyListeners.get(response.sequence)) {
+          this.replyListeners.get(response.sequence).replyReceived(response);
+          this.replyListeners.delete(response.sequence);
+        }
       }
       this.replies.delete(response.sequence);
-
     }
-
   }
 
   public invokeOrdered(request, replyListener: ReplyListener): any {
