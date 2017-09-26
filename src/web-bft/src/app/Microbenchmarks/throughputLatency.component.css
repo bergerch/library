@@ -1,0 +1,19 @@
+
+.card {
+  width: 90%;
+  max-width: 794px;
+  padding: 40px 28px;
+  height: 150px;
+  margin: 0 auto;
+}
+
+.form-field{
+  width: 100%;
+}
+
+
+.output{
+  width: 100%;
+  text-align: left;
+  margin-top: 20px;
+}

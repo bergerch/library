@@ -2,6 +2,7 @@ import { ModuleWithProviders }  from '@angular/core';
 import { Routes, RouterModule } from '@angular/router';
 import {counterRoutes} from "./CounterDemo/counter.routes";
 import {editorRoutes} from "./CollaborativeEditor/editor.routes";
+import {throughputLatencyRoutes} from "./Microbenchmarks/throughputLatency.routes"
 
 
 
@@ -13,7 +14,8 @@ export const routes: Routes = [
     pathMatch: 'full'
   },
   ...counterRoutes,
-  ...editorRoutes
+  ...editorRoutes,
+  ...throughputLatencyRoutes
 ];
 
 

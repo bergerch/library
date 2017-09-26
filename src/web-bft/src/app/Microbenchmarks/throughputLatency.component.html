@@ -1,0 +1,49 @@
+<md-card>
+  <md-card-title>
+  Mircobenchmarks for Latency and Throughput
+  </md-card-title>
+
+    <md-input-container class="form-field" >
+      <input mdInput placeholder="Number of Operations per Thread" [(ngModel)]="numberOfOps" flex [disabled]="started">
+    </md-input-container>
+
+    <md-input-container class="form-field" >
+      <input mdInput placeholder="Number of Threads" [(ngModel)]="threadNumber" [disabled]="started">
+    </md-input-container>
+
+    <md-input-container class="form-field" >
+      <input mdInput placeholder="Request Size" [(ngModel)]="requestSize" [disabled]="started">
+    </md-input-container>
+
+    <md-input-container class="form-field" >
+      <input mdInput placeholder="Interval (ms)" [(ngModel)]="interval" [disabled]="started">
+    </md-input-container>
+
+    <md-slide-toggle
+      [disabled]="started"
+      class="example-margin"
+      [(ngModel)]="verbose">
+      Print additional output (verbose)
+    </md-slide-toggle>
+
+    <md-slide-toggle
+      [disabled]="started"
+      class="example-margin"
+      [(ngModel)]="readOnly">
+      Invoke Requests unordered (read-only)
+    </md-slide-toggle>
+
+    <md-slide-toggle
+      [disabled]="started"
+      class="example-margin"
+      [(ngModel)]="dos">
+      Denial of Service Attack (Dos)
+    </md-slide-toggle>
+
+
+  <md-progress-bar [value] = "progress"> </md-progress-bar>
+  <button md-raised-button flex (click)="startBenchmark()" [disabled]="started" >Run Benchmark</button>
+  <md-divider></md-divider>
+
+  <div class="output" id="output"></div>
+</md-card>
