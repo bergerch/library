@@ -43,7 +43,12 @@
 
   <md-progress-bar [value] = "progress"> </md-progress-bar>
   <button md-raised-button flex (click)="startBenchmark()" [disabled]="started" >Run Benchmark</button>
+  <button md-raised-button flex (click)="abort()" [disabled]="!started" >Abort</button>
   <md-divider></md-divider>
 
   <div class="output" id="output"></div>
+
+
+  <button md-raised-button flex (click)="download()" *ngIf="started">Download Output</button>
+
 </md-card>

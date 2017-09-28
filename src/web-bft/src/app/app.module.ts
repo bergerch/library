@@ -11,6 +11,7 @@ import {Counter} from "./CounterDemo/counter.component";
 import {RouterModule} from "@angular/router";
 import {Editor} from "./CollaborativeEditor/editor.component";
 import {ThroughputLatency} from "./Microbenchmarks/throughputLatency.component";
+import {Runner} from "./Microbenchmarks/runner.component";
 
 
 @NgModule({
@@ -18,7 +19,8 @@ import {ThroughputLatency} from "./Microbenchmarks/throughputLatency.component";
     AppComponent,
     Counter,
     Editor,
-    ThroughputLatency
+    ThroughputLatency,
+    Runner
   ],
   imports: [
     MaterialModule.forRoot(),

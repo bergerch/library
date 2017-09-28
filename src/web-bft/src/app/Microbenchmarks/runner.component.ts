@@ -4,11 +4,12 @@ import {TOMConfiguration} from "../../bft/config/TOMConfiguration";
 import { WebWorkerService } from '../../../node_modules/angular2-web-worker/web-worker';
 
 @Component({
-  selector: 'throughputLatency',
-  templateUrl: './throughputLatency.component.html',
-  styleUrls: ['./throughputLatency.component.css']
+  selector: 'runner',
+  templateUrl: './runner.component.html',
+  styleUrls: ['./runner.component.css'],
+  providers: [ServiceProxy, TOMConfiguration]
 })
-export class ThroughputLatency implements OnInit{
+export class Runner implements OnInit{
 
   processId: number = 1000; // Id of the first process
   threadNumber: number = 20; // Number of Threads used in the system
@@ -23,14 +24,14 @@ export class ThroughputLatency implements OnInit{
   output;
   started: boolean = false;
 
-  constructor() {
+  constructor(private proxy: ServiceProxy) {
 
   }
 
   ngOnInit() {
 
-   this.output = document.getElementById('output');
-   this.started = false;
+    this.output = document.getElementById('output');
+    this.started = true;
 
   }
 
@@ -43,21 +44,6 @@ export class ThroughputLatency implements OnInit{
     this.output.innerHTML += s + '<br>';
   }
 
-  abort() {
-    this.started = false;
-    this.output.innerHTML = '';
-
-  }
-
-  startBenchmark() {
-    this.started = true;
-    this.println('Benchmark started with ' + this.threadNumber + ' threads. ' + 'Each thread will send ' + this.numberOfOps
-    + ' requests. The request content size is set to ' + this.requestSize + ' Bytes. Each thread will wait at least ' + this.interval
-      + ' ms before sending the next request. Read-only: ' + this.readOnly + ' Verbose: ' + this.verbose + ' dos: ' + this.dos +
-    ' Note the browser will send up to ' + this.threadNumber*1000/this.interval + ' requests per second.' );
-
-
-  }
 
 
   download() {
@@ -69,5 +55,3 @@ export class ThroughputLatency implements OnInit{
 
 
 }
-
-
