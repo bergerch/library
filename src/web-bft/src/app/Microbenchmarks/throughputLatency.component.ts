@@ -10,10 +10,10 @@ import {Subscription} from "rxjs/Subscription";
 export class ThroughputLatency implements OnInit{
 
   processId: number = 1000; // Id of the first process
-  threadNumber: number = 4; // Number of Threads used in the system
-  numberOfOps : number = 10000; // How many operations each client executs e.g. the number of requests
+  threadNumber: number = 8; // Number of Threads used in the system
+  numberOfOps : number = 100000; // How many operations each client executs e.g. the number of requests
   requestSize : number = 0; // Number of Bytes of content field for a message
-  interval : number = 5; // Milliseconds a client waits before sending the next request
+  interval : number = 1; // Milliseconds a client waits before sending the next request
   readOnly : boolean = false; // If client should send read-only requests instead of ordered requests
   verbose : boolean = true; // Enable for additional output;
   dos : boolean = false; // For simulating a dos attack
@@ -63,9 +63,20 @@ export class ThroughputLatency implements OnInit{
 
     let runner = document.getElementById("runner");
 
+
+    localStorage.setItem('Benchmark-interval', JSON.stringify(this.interval));
+    localStorage.setItem('Benchmark-numberOfOps', JSON.stringify(this.numberOfOps));
+    localStorage.setItem('Benchmark-requestSize', JSON.stringify(this.requestSize));
+    localStorage.setItem('Benchmark-readOnly', JSON.stringify(this.readOnly));
+    localStorage.setItem('Benchmark-progress', JSON.stringify(this.progress));
+
     for (let i = 0; i < this.threadNumber; i++) {
-      runner.click();
+     // runner.click();
+      window.open('runner/'+i, '_newtab'+i);
+      console.log('test');
     }
+
+
 
 
     let i = 100;

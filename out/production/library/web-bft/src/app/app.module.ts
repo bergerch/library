@@ -10,12 +10,17 @@ import { AppComponent } from './app.component';
 import {Counter} from "./CounterDemo/counter.component";
 import {RouterModule} from "@angular/router";
 import {Editor} from "./CollaborativeEditor/editor.component";
+import {ThroughputLatency} from "./Microbenchmarks/throughputLatency.component";
+import {Runner} from "./Microbenchmarks/runner.component";
+
 
 @NgModule({
   declarations: [
     AppComponent,
     Counter,
-    Editor
+    Editor,
+    ThroughputLatency,
+    Runner
   ],
   imports: [
     MaterialModule.forRoot(),
