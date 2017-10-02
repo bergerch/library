@@ -227,6 +227,8 @@ export class ServiceProxy extends TOMSender implements ReplyReceiver {
 
     }
 
+    return this.reqId;
+
   }
 
   /**

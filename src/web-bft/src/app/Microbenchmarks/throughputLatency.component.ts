@@ -1,6 +1,7 @@
 import {Component, Input, Output, EventEmitter, OnInit} from '@angular/core';
 import {Observable} from "rxjs/Observable";
 import {Subscription} from "rxjs/Subscription";
+import { Router } from '@angular/router';
 
 @Component({
   selector: 'throughputLatency',
@@ -24,6 +25,9 @@ export class ThroughputLatency implements OnInit{
 
   progressObservable: Observable<any>;
   progressSubscription: Subscription;
+
+
+
 
   constructor() {
 

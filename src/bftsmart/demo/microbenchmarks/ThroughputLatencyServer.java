@@ -166,7 +166,7 @@ public final class ThroughputLatencyServer extends DefaultRecoverable{
             throughputMeasurementStartTime = System.currentTimeMillis();
         }
 
-        return new byte[replySize];
+        return command;
     }
 
     public static void main(String[] args){

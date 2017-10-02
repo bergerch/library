@@ -126,8 +126,14 @@ export class CommunicationSystem implements ICommunicationSystem {
   private receive(reply, replyReceiver: ReplyReceiver, connection: ReplicaConnection) {
 
     let msgReceived = reply;
+
     if (this.TOMConfiguration.websockets) {
-      msgReceived = JSON.parse(reply.data);
+      try {
+        msgReceived = JSON.parse(reply.data);
+      }
+      catch (e) {
+        msgReceived = reply.data;
+      }
     }
 
     // Compute and compare hmacs

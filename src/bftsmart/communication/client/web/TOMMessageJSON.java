@@ -154,10 +154,10 @@ public class TOMMessageJSON {
 
 
         if (event != null) {
-            dataString = "{\"sequence\":"+sequence+",\"viewId\":"+view+",\"sender\":"+sender+",\"session\":"+session+",\"operationId\":"+operationId+",\"type\":"+type+",\"content\":"+"\""+content+"\""+",\"event\":"+"\""+event+"\""+"}";
+            dataString = "{\"sequence\":"+sequence+",\"viewId\":"+view+",\"sender\":"+sender+",\"session\":"+session+",\"operationId\":"+operationId+",\"type\":"+type+",\"content\":"+""+content+",\"event\":"+"\""+event+"\""+"}";
 
         } else {
-            dataString = "{\"sequence\":"+sequence+",\"viewId\":"+view+",\"sender\":"+sender+",\"session\":"+session+",\"operationId\":"+operationId+",\"type\":"+type+",\"content\":"+"\""+content+"\""+"}";
+            dataString = "{\"sequence\":"+sequence+",\"viewId\":"+view+",\"sender\":"+sender+",\"session\":"+session+",\"operationId\":"+operationId+",\"type\":"+type+",\"content\":"+content+"}";
 
         }
 

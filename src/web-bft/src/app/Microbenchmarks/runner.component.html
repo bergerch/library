@@ -1,8 +1,34 @@
 <div flex style="height: 500px">
   <md-progress-bar [value] = "progress"> </md-progress-bar>
  <span>#RequestsSent: {{requestSent}} </span>
+  <span>#RequestsReceived: {{requestReceived}} </span>
   <span>#Ops/s: {{opsPerSecond}} </span>
 
+  <div *ngIf="statisticComputed" id="output">
+    <div>
+      Request Size: {{requestSize}}
+    </div>
+    <div>
+    average latency (all): {{averageLatencyAll}} ms
+    </div>
+    <div>
+      max latency (all): {{maxLatency}} ms
+    </div>
+    <div>
+      min latency (all): {{minLatency}} ms
+    </div>
+    <div>
+      average latency (fastest Decile): {{averageLatency_1st_decile}} ms
+    </div>
+    <div>
+      average latency (slowest Decile): {{averageLatency_10nd_decile}} ms
+    </div>
+    <div>
+      Standard Deviation: {{standard_deviation}} ms
+    </div>
+
+
+  </div>
   <!--<md-spinner  *ngIf="started" class="centered" ></md-spinner> -->
 
 </div>
