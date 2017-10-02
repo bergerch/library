@@ -1,7 +1,6 @@
 import {Component, Input, Output, EventEmitter, OnInit} from '@angular/core';
 import {ServiceProxy} from "../../bft/tom/ServiceProxy.service";
 import {TOMConfiguration} from "../../bft/config/TOMConfiguration";
-import {WebWorkerService} from '../../../node_modules/angular2-web-worker/web-worker';
 import {Observable} from "rxjs/Observable";
 import {Subscription} from "rxjs/Subscription";
 import {ReplyListener} from "../../bft/communication/ReplyListener.interface";
@@ -18,8 +17,8 @@ export class Runner implements OnInit, ReplyListener {
 
 
   numberOfOps: number = 5000; // How many operations each client executs e.g. the number of requests
-  requestSize: number = 50000; // Number of Bytes of content field for a message
-  interval: number = 1; // Milliseconds a client waits before sending the next request
+  requestSize: number = 4000; // Number of Bytes of content field for a message
+  interval: number = 200; // Milliseconds a client waits before sending the next request
   readOnly: boolean = false; // If client should send read-only requests instead of ordered requests
   dos: boolean = false; // For simulating a dos attack
 
@@ -194,7 +193,7 @@ export class Runner implements OnInit, ReplyListener {
 
     let x = '';
 
-    for (let i = 0; i < size / 2; i++) { // Node UTF-16 Encoding, 2 Bytes per character are used
+    for (let i = 0; i < size; i++) {
       x += 'x';
     }
 
