@@ -77,8 +77,10 @@ export class Editor implements OnInit, ReplyListener {
 
       if (!this.subscribed) {
         this.editorProxy.invokeOrderedSubscribe('subscribe', this, 'onDocChange');
+        this.editorProxy.invokeUnordered(read, this);
         this.subscribed = true;
       }
+
     });
 
   }
