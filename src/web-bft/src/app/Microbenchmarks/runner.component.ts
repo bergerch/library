@@ -16,9 +16,9 @@ import {Router} from "@angular/router";
 export class Runner implements OnInit, ReplyListener {
 
 
-  numberOfOps: number = 5000; // How many operations each client executs e.g. the number of requests
-  requestSize: number = 4000; // Number of Bytes of content field for a message
-  interval: number = 200; // Milliseconds a client waits before sending the next request
+  numberOfOps: number = 10000; // How many operations each client executs e.g. the number of requests
+  requestSize: number = 1; // Number of Bytes of content field for a message
+  interval: number = 0; // Milliseconds a client waits before sending the next request
   readOnly: boolean = false; // If client should send read-only requests instead of ordered requests
   dos: boolean = false; // For simulating a dos attack
 

@@ -136,6 +136,8 @@ public class collabEditServer extends DefaultRecoverable implements Replier {
     }
 
     private byte[] documentToByte() {
+
+        String document = "\""+ this.document + "\"";
         try {
             return document.getBytes("UTF-8");
         } catch (UnsupportedEncodingException e) {

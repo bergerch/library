@@ -125,7 +125,7 @@ public class NettyClientServerCommunicationSystemServerSide extends SimpleChanne
 			b.option(ChannelOption.SO_BACKLOG, 1024);
 			b.group(bossGroup, workerGroup)
 					.channel(NioServerSocketChannel.class)
-					.handler(new LoggingHandler(LogLevel.INFO))
+					//.handler(new LoggingHandler(LogLevel.INFO))
 					.childHandler(new HttpInitializer(this))
 			.childOption(ChannelOption.SO_KEEPALIVE, true).childOption(ChannelOption.TCP_NODELAY, true);
 

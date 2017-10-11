@@ -2,6 +2,7 @@
   <md-progress-bar [value] = "progress"> </md-progress-bar>
  <span>#RequestsSent: {{requestSent}} </span>
   <span>#RequestsReceived: {{requestReceived}} </span>
+  <span>Request Size: {{requestSize}} </span>
   <span>#Ops/s: {{opsPerSecond}} </span>
 
   <div *ngIf="statisticComputed" id="output">

@@ -59,6 +59,7 @@ export class Editor implements OnInit, ReplyListener {
     this.editor.addEventListener('input', (e) => {
       let write = e.target.innerHTML;
 
+
       let d = this.dmp.diff_main(this.doc_client, write);
       this.dmp.diff_cleanupSemantic(d);
       let ds = this.dmp.diff_prettyHtml(d);
@@ -96,6 +97,7 @@ export class Editor implements OnInit, ReplyListener {
       console.log("Apply Changes ...");
 
       let write = buff.toString('utf8');
+
 
       let d = this.dmp.diff_main(this.doc_client, write);
       this.dmp.diff_cleanupSemantic(d);
