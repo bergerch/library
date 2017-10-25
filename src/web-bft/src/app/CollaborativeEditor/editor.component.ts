@@ -67,17 +67,18 @@ export class Editor implements OnInit, ReplyListener {
 
       this.doc_client = write;
 
-      this.editorProxy.invokeOrdered(write, this);
+      let diff = JSON.stringify({diff: d});
+
+      console.log('diff ',d);
+      this.editorProxy.invokeOrdered({operation: 'write', data: d}, this);
     });
-    let read = '';
-    console.log('Read ', read);
+
     this.editorObservable = Observable.interval(300);
     this.editorSubscription = this.editorObservable.subscribe((num) => {
-      //this.editorProxy.invokeUnordered(read, this)
 
       if (!this.subscribed) {
-        this.editorProxy.invokeOrderedSubscribe('subscribe', this, 'onDocChange');
-        this.editorProxy.invokeUnordered(read, this);
+        this.editorProxy.invokeOrderedSubscribe({operation: 'subscribe', data: 'onDocChange'}, this, 'onDocChange');
+        this.editorProxy.invokeUnordered({operation: 'read'}, this);
         this.subscribed = true;
       }
 

@@ -16,8 +16,8 @@ import {Router} from "@angular/router";
 export class Runner implements OnInit, ReplyListener {
 
 
-  numberOfOps: number = 10000; // How many operations each client executs e.g. the number of requests
-  requestSize: number = 1; // Number of Bytes of content field for a message
+  numberOfOps: number = 40000000; // How many operations each client executs e.g. the number of requests
+  requestSize: number = 4000; // Number of Bytes of content field for a message
   interval: number = 0; // Milliseconds a client waits before sending the next request
   readOnly: boolean = false; // If client should send read-only requests instead of ordered requests
   dos: boolean = false; // For simulating a dos attack
@@ -57,11 +57,13 @@ export class Runner implements OnInit, ReplyListener {
   ngOnInit() {
     this.output = document.getElementById('output');
     this.started = true;
-    if (!this.measureLatency) {
+    if (this.measureLatency) {
+      /*
       this.interval = JSON.parse(localStorage.getItem('Benchmark-interval'));
       this.numberOfOps = JSON.parse(localStorage.getItem('Benchmark-numberOfOps'));
       this.requestSize = JSON.parse(localStorage.getItem('Benchmark-requestSize'));
-      this.readOnly = JSON.parse(localStorage.getItem('Benchmark-readOnly'));
+      this.readOnly = JSON.parse(localStorage.getItem('Benchmark-readOnly'));*/
+      this.numberOfOps = 5000;
     }
     console.log(this.interval, this.numberOfOps, this.requestSize, this.readOnly);
     let request = this.createDummyJSON(this.requestSize);

@@ -45,13 +45,12 @@
   width: 90%;
   max-width: 794px;
   padding: 40px 28px;
-  height: 0px;
   min-height: 0px;
   background: #fff;
   margin: 0 auto;
   transform: translateY(-100px);
   text-align: left;
-  visibility: hidden;
+  /*visibility: hidden;*/
 
 }:focus {
    outline: none;

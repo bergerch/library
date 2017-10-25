@@ -10,6 +10,10 @@ import bftsmart.tom.server.defaultservices.DefaultRecoverable;
 
 import java.io.*;
 
+import org.json.simple.JSONArray;
+import org.json.simple.JSONObject;
+import org.json.simple.parser.JSONParser;
+import org.json.simple.parser.ParseException;
 
 public class collabEditServer extends DefaultRecoverable implements Replier {
 
@@ -22,6 +26,8 @@ public class collabEditServer extends DefaultRecoverable implements Replier {
     int subscriptionCount = 0;
 
     DiffMatchPatch dmp = new DiffMatchPatch();
+
+    JSONParser parser = new JSONParser();
 
     public collabEditServer(int id) {
         replica = new ServiceReplica(id, this, this, null, this);
@@ -61,12 +67,12 @@ public class collabEditServer extends DefaultRecoverable implements Replier {
 
     private byte[] executeSingle(byte[] command, MessageContext msgCtx) {
 
-
-        // If its a subscription
-        String event = msgCtx.getEvent();
-        if (event != null && event.equals("onDocChange")) {
-            String operation = new String(command);
-            System.out.println(" Received event " + event + "from " + msgCtx.getSender() + " with operation " + operation);
+        // API: Subscribe / Unsubscribe / Write / Read (ordered)
+        try {
+            Object obj = parser.parse(new String(command));
+            JSONObject jsonObject = (JSONObject) obj;
+            String operation = (String) jsonObject.get("operation");
+            String event = msgCtx.getEvent();
             switch (operation) {
                 case "subscribe":
                     addSubscriber(msgCtx.getSender(), event);
@@ -76,21 +82,25 @@ public class collabEditServer extends DefaultRecoverable implements Replier {
                     removeSubscriber(msgCtx.getSender(), event);
                     System.out.println(" Added subscriber " + msgCtx.getSender() + " for event " + event);
                     break;
-            }
-            return documentToByte();
-        }
+                case "write":
+                    String data = (String) jsonObject.get("data");
+                    System.out.println(" Apply Patch to document " + data);
 
-        // If its changes to the document
-        System.out.println(" Apply changes to document " + document);
-        try {
-            String changedDoc = new String(command, "UTF-8");
-            this.document = changedDoc;
-            System.out.println("Doc changed to: " + document);
-        } catch (UnsupportedEncodingException e) {
+                    String changedDoc = data;
+                    this.document = changedDoc;
+                    System.out.println("Doc changed to: " + document);
+                    return documentToByte();
+                case "read":
+                    // Ordered (!) read-request
+                    System.out.println("Reading document " + document);
+                    return documentToByte();
+            }
+        } catch (ParseException e) {
             e.printStackTrace();
         } finally {
             return documentToByte();
         }
+
     }
 
     @SuppressWarnings("unchecked")
@@ -137,7 +147,7 @@ public class collabEditServer extends DefaultRecoverable implements Replier {
 
     private byte[] documentToByte() {
 
-        String document = "\""+ this.document + "\"";
+        String document = "\"" + this.document + "\"";
         try {
             return document.getBytes("UTF-8");
         } catch (UnsupportedEncodingException e) {
