@@ -113,7 +113,21 @@ public class DiffMatchPatch {
      * which means: delete "Hello", add "Goodbye" and keep " world."
      */
     public enum Operation {
-        DELETE, INSERT, EQUAL
+        DELETE, INSERT, EQUAL;
+
+        public static Operation fromInt(int i) {
+            switch(i){
+                case -1:
+                    return DELETE;
+                case 0:
+                    return EQUAL;
+                case 1:
+                    return INSERT;
+                default:
+                    return EQUAL;
+
+            }
+        }
     }
 
     /**

@@ -9,6 +9,7 @@ import bftsmart.tom.server.Replier;
 import bftsmart.tom.server.defaultservices.DefaultRecoverable;
 
 import java.io.*;
+import java.util.LinkedList;
 
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
@@ -83,11 +84,21 @@ public class collabEditServer extends DefaultRecoverable implements Replier {
                     System.out.println(" Added subscriber " + msgCtx.getSender() + " for event " + event);
                     break;
                 case "write":
-                    String data = (String) jsonObject.get("data");
+                    System.out.println(" Write ");
+                    JSONArray data = (JSONArray) jsonObject.get("data");
                     System.out.println(" Apply Patch to document " + data);
 
-                    String changedDoc = data;
-                    this.document = changedDoc;
+                    LinkedList<DiffMatchPatch.Diff> diffs = new LinkedList<DiffMatchPatch.Diff>();
+                    for (Object a : data) {
+                       long method =  (long) ((JSONArray) a).get(0);
+                       String text = ((String) ((JSONArray) a).get(1));
+                       System.out.println("Diff method: "+ method+ " text " + text);
+                       DiffMatchPatch.Operation op = DiffMatchPatch.Operation.fromInt((int) method);
+                       DiffMatchPatch.Diff diff = new DiffMatchPatch.Diff(op, text);
+                       diffs.add(diff);
+                    }
+                    LinkedList<DiffMatchPatch.Patch> patch = dmp.patch_make(this.document, diffs);
+                    this.document = (String) dmp.patch_apply(patch, this.document)[0];
                     System.out.println("Doc changed to: " + document);
                     return documentToByte();
                 case "read":
