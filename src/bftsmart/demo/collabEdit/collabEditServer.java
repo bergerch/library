@@ -22,8 +22,9 @@ public class collabEditServer extends DefaultRecoverable implements Replier {
     ServiceReplica replica = null;
 
     private String document = "Hello World!";
+    private String server_shadow = "Hello World!";
 
-    int[] subscribers = new int[100];
+    int[] subscribers = new int[50];
     int subscriptionCount = 0;
 
     DiffMatchPatch dmp = new DiffMatchPatch();
@@ -32,7 +33,6 @@ public class collabEditServer extends DefaultRecoverable implements Replier {
 
     public collabEditServer(int id) {
         replica = new ServiceReplica(id, this, this, null, this);
-
         for (int i = 0; i < subscribers.length; i++) {
             subscribers[i] = -1;
         }
@@ -68,12 +68,14 @@ public class collabEditServer extends DefaultRecoverable implements Replier {
 
     private byte[] executeSingle(byte[] command, MessageContext msgCtx) {
 
-        // API: Subscribe / Unsubscribe / Write / Read (ordered)
         try {
+            // Parse command
             Object obj = parser.parse(new String(command));
             JSONObject jsonObject = (JSONObject) obj;
             String operation = (String) jsonObject.get("operation");
             String event = msgCtx.getEvent();
+
+            // API: subscribe / unsubscribe / write / read (ordered)
             switch (operation) {
                 case "subscribe":
                     addSubscriber(msgCtx.getSender(), event);
@@ -84,23 +86,38 @@ public class collabEditServer extends DefaultRecoverable implements Replier {
                     System.out.println(" Added subscriber " + msgCtx.getSender() + " for event " + event);
                     break;
                 case "write":
-                    System.out.println(" Write ");
-                    JSONArray data = (JSONArray) jsonObject.get("data");
-                    System.out.println(" Apply Patch to document " + data);
+                    // Differential Synchronisation algorithm starts here
+                    this.server_shadow = this.document;
 
+                    // Parse Diff
+                    JSONArray data = (JSONArray) jsonObject.get("data");
                     LinkedList<DiffMatchPatch.Diff> diffs = new LinkedList<DiffMatchPatch.Diff>();
                     for (Object a : data) {
-                       long method =  (long) ((JSONArray) a).get(0);
-                       String text = ((String) ((JSONArray) a).get(1));
-                       System.out.println("Diff method: "+ method+ " text " + text);
-                       DiffMatchPatch.Operation op = DiffMatchPatch.Operation.fromInt((int) method);
-                       DiffMatchPatch.Diff diff = new DiffMatchPatch.Diff(op, text);
-                       diffs.add(diff);
+                        long method = (long) ((JSONArray) a).get(0);
+                        String text = ((String) ((JSONArray) a).get(1));
+                        DiffMatchPatch.Operation op = DiffMatchPatch.Operation.fromInt((int) method);
+                        DiffMatchPatch.Diff diff = new DiffMatchPatch.Diff(op, text);
+                        diffs.add(diff);
                     }
+
+                    // Create Patch
                     LinkedList<DiffMatchPatch.Patch> patch = dmp.patch_make(this.document, diffs);
+
+                    System.out.println("----Applying Patch----");
+                    System.out.println(patch);
+
+                    // Apply Patch
                     this.document = (String) dmp.patch_apply(patch, this.document)[0];
-                    System.out.println("Doc changed to: " + document);
-                    return documentToByte();
+                    System.out.println("----Patch applied!---");
+
+                    // Create Diffs, document_shadow <- updated_document
+                    LinkedList<DiffMatchPatch.Diff> edits = dmp.diff_main(this.server_shadow, this.document);
+                    dmp.diff_cleanupSemantic(edits);
+                    this.server_shadow = this.document;
+                    System.out.println("Document changed to: " + document);
+
+                    // Distribute changes to all subscribed clients
+                    return diffsToBytes(edits);
                 case "read":
                     // Ordered (!) read-request
                     System.out.println("Reading document " + document);
@@ -138,7 +155,6 @@ public class collabEditServer extends DefaultRecoverable implements Replier {
 
         // FIXME
 
-
         try {
             System.out.println("getState called");
             ByteArrayOutputStream bos = new ByteArrayOutputStream();
@@ -156,28 +172,54 @@ public class collabEditServer extends DefaultRecoverable implements Replier {
         }
     }
 
+    private byte[] diffsToBytes(LinkedList<DiffMatchPatch.Diff> edits) {
+
+        JSONObject jsonObject = new JSONObject();
+        JSONArray jsonArray = new JSONArray();
+        int k = 0;
+        for (DiffMatchPatch.Diff edit : edits) {
+            JSONArray a = new JSONArray();
+            a.add(0, DiffMatchPatch.Operation.toInt(edit.operation));
+            a.add(1, edit.text);
+            jsonArray.add(k, a);
+            k++;
+        }
+        jsonObject.put("operation", "write");
+        jsonObject.put("data", jsonArray);
+        String jsonString = jsonObject.toJSONString();
+        return jsonString.getBytes();
+    }
+
     private byte[] documentToByte() {
 
-        String document = "\"" + this.document + "\"";
-        try {
-            return document.getBytes("UTF-8");
-        } catch (UnsupportedEncodingException e) {
-            e.printStackTrace();
-            System.out.println("ERROR ENCODING NOT SUPPORTED!!!!!");
-            return document.getBytes();
-        }
+        JSONObject jsonObject = new JSONObject();
+        jsonObject.put("operation", "read");
+        jsonObject.put("data", this.document);
+        return jsonObject.toJSONString().getBytes();
+
     }
 
 
     @Override
     public void manageReply(TOMMessage request, MessageContext msgCtx) {
 
+        String event = msgCtx.getEvent();
         if (request.getReqType() == TOMMessageType.ORDERED_REQUEST)
             request.reply.setEvent("onDocChange");
 
-        rc.getServerCommunicationSystem().send(subscribers, request.reply);
+        if (request.getReqType() == TOMMessageType.UNORDERED_REQUEST) {
+            System.out.println("Self-Send back");
+            int[] replyManagement = new int[1];
+            replyManagement[0] = request.getSender();
+            rc.getServerCommunicationSystem().send(replyManagement, request.reply);
+            return;
+        } else {
+            System.out.println("Group-Send back");
+            rc.getServerCommunicationSystem().send(subscribers, request.reply);
+        }
 
     }
+
 
     @Override
     public void setReplicaContext(ReplicaContext rc) {
@@ -185,24 +227,18 @@ public class collabEditServer extends DefaultRecoverable implements Replier {
         this.rc = rc;
     }
 
+
     public String printSubscriber() {
-
         String s = "[";
-
         for (int i = 0; i < subscriptionCount; i++) {
-
             s = s + ", " + subscribers[i];
         }
-
         s += "]";
-
         return s;
     }
 
 
     private void removeSubscriber(int sender, String event) {
-
-
         boolean removed = false;
         for (int i = 0; i < subscriptionCount; i++) {
             if (subscribers[i] == sender) {
@@ -215,14 +251,11 @@ public class collabEditServer extends DefaultRecoverable implements Replier {
             }
         }
         subscriptionCount = removed ? subscriptionCount-- : subscriptionCount;
-
         System.out.println("Now subscribers are " + printSubscriber());
-
     }
 
+
     private void addSubscriber(int sender, String event) {
-
-
         boolean contains = false;
         for (int i = 0; i < subscriptionCount; i++) {
             if (subscribers[i] == sender) {
@@ -233,8 +266,6 @@ public class collabEditServer extends DefaultRecoverable implements Replier {
             subscribers[subscriptionCount] = sender;
             subscriptionCount++;
         }
-
-
         System.out.println("Now subscribers are " + printSubscriber());
     }
 

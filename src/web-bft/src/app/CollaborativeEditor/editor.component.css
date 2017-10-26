@@ -50,7 +50,7 @@
   margin: 0 auto;
   transform: translateY(-100px);
   text-align: left;
-  /*visibility: hidden;*/
+  visibility: hidden;
 
 }:focus {
    outline: none;

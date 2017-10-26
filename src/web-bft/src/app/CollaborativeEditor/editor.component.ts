@@ -18,7 +18,7 @@ export class Editor implements OnInit, ReplyListener {
   editorObservable: Observable<any>;
   editorSubscription: Subscription;
 
-  doc_client;
+  client_shadow;
 
   cursorPosition;
 
@@ -29,7 +29,8 @@ export class Editor implements OnInit, ReplyListener {
 
   dmp;
 
-  constructor(private editorProxy: ServiceProxy) {}
+  constructor(private editorProxy: ServiceProxy) {
+  }
 
 
   ngOnInit() {
@@ -39,37 +40,24 @@ export class Editor implements OnInit, ReplyListener {
     let DiffMatchPatch = require('diff-match-patch');
     this.dmp = new DiffMatchPatch();
 
-/*
-    let text1 = 'Eine alte Dame ging mit ihrem Hund spazieren';
-    let text2 = 'Eine alte Dame ging mit ihrem Pferd spazieren';
-
-    let d = this.dmp.diff_main(text1, text2);
-    this.dmp.diff_cleanupSemantic(d);
-    let ds = this.dmp.diff_prettyHtml(d);
-
-
-
-    */
 
     this.editor = document.getElementById('editor');
     this.editor.focus();
 
-    this.doc_client = this.editor.innerHTML;
+    this.client_shadow = this.editor.innerHTML;
 
     this.editor.addEventListener('input', (e) => {
       let write = e.target.innerHTML;
 
 
-      let d = this.dmp.diff_main(this.doc_client, write);
+      let d = this.dmp.diff_main(this.client_shadow, write);
       this.dmp.diff_cleanupSemantic(d);
       let ds = this.dmp.diff_prettyHtml(d);
       this.differ.innerHTML = ds;
 
-      this.doc_client = write;
+      this.client_shadow = write;
 
-      let diff = JSON.stringify({diff: d});
-
-      console.log('diff ',d);
+      console.log('diff ', d);
       this.editorProxy.invokeOrdered({operation: 'write', data: d}, this);
     });
 
@@ -94,27 +82,27 @@ export class Editor implements OnInit, ReplyListener {
 
     if (cursorPosition != -1)
       this.cursorPosition = cursorPosition;
+    let buff = new Buffer(sm.content.data);
+    switch (sm.content.operation) {
 
-    let buff = new Buffer(sm.content);
-    if (this.editor.innerHTML != buff.toString('utf8')) {
-      console.log("Apply Changes ...");
-
-      let write = buff.toString('utf8');
-
-
-      let d = this.dmp.diff_main(this.doc_client, write);
-      this.dmp.diff_cleanupSemantic(d);
-      let ds = this.dmp.diff_prettyHtml(d);
-      this.differ.innerHTML = ds;
-
-      this.doc_client = write;
-
-      this.editor.innerHTML = write;
-      this.editor.focus();
-      this.setCurrentCursorPosition(this.cursorPosition);
-
+      case 'write':
+        if (this.editor.innerHTML != buff.toString('utf8')) {
+          let diffs = buff.toString('utf8');
+          console.log('Received Diffs ...', diffs);
+          let patch = this.dmp.patch_make(this.editor.innerHTML, diffs);
+          console.log('Applying Patch ', patch);
+          this.editor.innerHTML = this.dmp.patch_apply(patch, this.editor.innerHTML)[0];
+          this.client_shadow = this.editor.innerHTML;
+        }
+        break;
+      case 'read':
+        let document = buff.toString('utf8');
+        this.editor.innerHTML = document;
+        this.client_shadow = document;
+        break;
     }
-
+    this.editor.focus();
+    this.setCurrentCursorPosition(this.cursorPosition);
 
   }
 

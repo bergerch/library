@@ -31,6 +31,9 @@ import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 
+import java.io.ByteArrayOutputStream;
+import java.io.DataOutputStream;
+import java.io.IOException;
 import java.net.ConnectException;
 import java.net.InetSocketAddress;
 import java.nio.channels.ClosedChannelException;
@@ -293,23 +296,23 @@ public class NettyClientServerCommunicationSystemServerSide extends SimpleChanne
 	@Override
 	public void send(int[] targets, TOMMessage sm, boolean serializeClassHeaders) {
 
-
-
 		ArrayList<WebClientServerSession> webClientReceivers = new ArrayList<>();
 		ArrayList<Integer> targetsNetty = new ArrayList<>();
 
 		for (int i = 0; i< targets.length; i++) {
-			if (webClientConnections.containsKey(new Integer(targets[i]))) {
+			if ( !(targets[i] == -1) && webClientConnections.containsKey(new Integer(targets[i]))) {
 				webClientReceivers.add(webClientConnections.get(new Integer(targets[i])));
 				// System.out.println("Receiver: " + webClientConnections.get(new Integer(targets[i])).toString());
 			} else {
-				targetsNetty.add(new Integer(targets[i]));
+				if(!(targets[i] == -1))
+					targetsNetty.add(new Integer(targets[i]));
 			}
 		}
 
 		if (!webClientReceivers.isEmpty()) {
 			webClientHandler.send(webClientReceivers, sm);
 		}
+
 
 		// FIXME
 		if (targetsNetty.size() == 0) {
@@ -322,8 +325,6 @@ public class NettyClientServerCommunicationSystemServerSide extends SimpleChanne
 			targets[k] = i.intValue();
 			k++;
 		}
-
-		/*
 
 		//serialize
 		// message
@@ -419,9 +420,7 @@ public class NettyClientServerCommunicationSystemServerSide extends SimpleChanne
 				//sendLock.unlock();
 				rl.readLock().unlock();
 			}
-		}*/
-
-
+		}
 	}
 
 	public RequestReceiver getRequestReceiver() {

@@ -128,6 +128,20 @@ public class DiffMatchPatch {
 
             }
         }
+
+        public static int toInt(Operation o) {
+            switch(o){
+                case DELETE:
+                    return -1;
+                case EQUAL:
+                    return 0;
+                case INSERT:
+                    return 1;
+                default:
+                    return 0;
+
+            }
+        }
     }
 
     /**
