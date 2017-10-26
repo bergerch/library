@@ -15,6 +15,7 @@ import {ReplyListener} from "../../bft/communication/ReplyListener.interface";
 export class Editor implements OnInit, ReplyListener {
 
   editor;
+
   editorObservable: Observable<any>;
   editorSubscription: Subscription;
 
@@ -25,72 +26,77 @@ export class Editor implements OnInit, ReplyListener {
   range;
   subscribed: boolean;
 
-  differ;
-
   dmp;
 
-  constructor(private editorProxy: ServiceProxy) {
-  }
+  constructor(private editorProxy: ServiceProxy) {}
 
 
   ngOnInit() {
-
-    this.differ = this.editor = document.getElementById('differ');
-
+    // Init Diff Match Patch
     let DiffMatchPatch = require('diff-match-patch');
     this.dmp = new DiffMatchPatch();
 
-
+    // Init Editor and copy
     this.editor = document.getElementById('editor');
     this.editor.focus();
-
     this.client_shadow = this.editor.innerHTML;
 
-    this.editor.addEventListener('input', (e) => {
-      let write = e.target.innerHTML;
+    // Create Listener for document changes
+    this.createListener();
 
-
-      let d = this.dmp.diff_main(this.client_shadow, write);
-      this.dmp.diff_cleanupSemantic(d);
-      let ds = this.dmp.diff_prettyHtml(d);
-      this.differ.innerHTML = ds;
-
-      this.client_shadow = write;
-
-      console.log('diff ', d);
-      this.editorProxy.invokeOrdered({operation: 'write', data: d}, this);
-    });
-
-    this.editorObservable = Observable.interval(300);
-    this.editorSubscription = this.editorObservable.subscribe((num) => {
-
-      if (!this.subscribed) {
-        this.editorProxy.invokeOrderedSubscribe({operation: 'subscribe', data: 'onDocChange'}, this, 'onDocChange');
-        this.editorProxy.invokeUnordered({operation: 'read'}, this);
-        this.subscribed = true;
-      }
-
-    });
+    // Get initial document state and subscribe for changes
+    this.joinDocument();
 
   }
 
+  createListener() {
+    this.editor.addEventListener('input', (e) => {
+      // part of Differential Synchronisation: create a Diff
+      let write = e.target.innerHTML;
+      let d = this.dmp.diff_main(this.client_shadow, write);
+      this.dmp.diff_cleanupSemantic(d);
+      this.client_shadow = write;
+
+      // Send write command to replica set
+      this.editorProxy.invokeOrdered({operation: 'write', data: d}, this);
+    });
+  }
+
+  joinDocument() {
+    this.editorObservable = Observable.interval(300);
+    this.editorSubscription = this.editorObservable.subscribe((num) => {
+      if (!this.subscribed) {
+        // Subscribe to document changes
+        this.editorProxy.invokeOrderedSubscribe({operation: 'subscribe', data: 'onDocChange'}, this, 'onDocChange');
+
+        // Read initial document state
+        this.editorProxy.invokeUnordered({operation: 'read'}, this);
+        this.subscribed = true;
+      }
+    });
+  }
 
   replyReceived(sm: TOMMessage) {
 
+    // Fix cursor position
     let cursorPosition = this.getCurrentCursorPosition('editor');
     console.log(cursorPosition);
-
     if (cursorPosition != -1)
       this.cursorPosition = cursorPosition;
-    let buff = new Buffer(sm.content.data);
-    switch (sm.content.operation) {
 
+    // Read data
+    let buff = new Buffer(sm.content.data);
+
+    // Operation is one of: subscribe, unsubscribe, read, write
+    switch (sm.content.operation) {
       case 'write':
         if (this.editor.innerHTML != buff.toString('utf8')) {
           let diffs = buff.toString('utf8');
-          console.log('Received Diffs ...', diffs);
+
+          // Create Patch relative to document version
           let patch = this.dmp.patch_make(this.editor.innerHTML, diffs);
-          console.log('Applying Patch ', patch);
+
+          // Apply Patch to document, shadow <-- document state
           this.editor.innerHTML = this.dmp.patch_apply(patch, this.editor.innerHTML)[0];
           this.client_shadow = this.editor.innerHTML;
         }
@@ -103,8 +109,8 @@ export class Editor implements OnInit, ReplyListener {
     }
     this.editor.focus();
     this.setCurrentCursorPosition(this.cursorPosition);
-
   }
+
 
   createRange(node, chars, range?) {
     if (!range) {
@@ -133,7 +139,6 @@ export class Editor implements OnInit, ReplyListener {
         }
       }
     }
-
     return range;
   };
 
@@ -152,6 +157,7 @@ export class Editor implements OnInit, ReplyListener {
     }
   };
 
+
   isChildOf(node, parentId) {
     while (node !== null) {
       if (node.id === parentId) {
@@ -162,6 +168,7 @@ export class Editor implements OnInit, ReplyListener {
 
     return false;
   };
+
 
   getCurrentCursorPosition(parentId) {
     var selection = window.getSelection(),
