@@ -1,5 +1,9 @@
+
 <div class="doc">
   <div class="doc__background-ribbon"></div>
+  <button md-raised-button (click)="autoWrite()">Auto Write</button>
+
+
   <md-card class="doc__text-editor hidden " id="editor" contentEditable='true' spellcheck="false"></md-card>
 
   <md-card class="doc__text-diff hidden " id="differ"  ></md-card>
