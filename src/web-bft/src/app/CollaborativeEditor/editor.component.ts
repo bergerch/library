@@ -26,9 +26,11 @@ export class Editor implements OnInit, ReplyListener {
   range;
   subscribed: boolean;
 
+  local_change;
   dmp;
 
-  constructor(private editorProxy: ServiceProxy) {}
+  constructor(private editorProxy: ServiceProxy) {
+  }
 
 
   ngOnInit() {
@@ -60,6 +62,11 @@ export class Editor implements OnInit, ReplyListener {
       // Send write command to replica set
       this.editorProxy.invokeOrdered({operation: 'write', data: d}, this);
     });
+
+    this.editor.addEventListener('click', (e) => {
+      console.log(this.getCurrentCursorPosition('editor'));
+    });
+
   }
 
   joinDocument() {
@@ -90,21 +97,30 @@ export class Editor implements OnInit, ReplyListener {
     // Operation is one of: subscribe, unsubscribe, read, write
     switch (sm.content.operation) {
       case 'write':
-        if (this.editor.innerHTML != buff.toString('utf8')) {
-          let diffs = buff.toString('utf8');
+        console.log('Writing...');
 
-          // Create Patch relative to document version
-          let patch = this.dmp.patch_make(this.editor.innerHTML, diffs);
+        let diffs = sm.content.data;
 
-          // Apply Patch to document, shadow <-- document state
-          this.editor.innerHTML = this.dmp.patch_apply(patch, this.editor.innerHTML)[0];
-          this.client_shadow = this.editor.innerHTML;
+        // Create Patch relative to document version
+        let patch_changed = this.dmp.patch_make(this.local_change, diffs);
+        let patch = this.dmp.patch_make(this.client_shadow, diffs);
+        let patch2 = this.dmp.patch_make(this.editor.innerHTML, diffs);
+
+        this.local_change = this.dmp.patch_apply(patch_changed, this.local_change)[0];
+        if (this.local_change != this.client_shadow) {
+          // Apply Patch to document
+          this.client_shadow = this.dmp.patch_apply(patch, this.client_shadow)[0];
+          this.editor.innerHTML = this.dmp.patch_apply(patch2, this.editor.innerHTML)[0];
         }
+
+
         break;
       case 'read':
+        console.log('Reading...');
         let document = buff.toString('utf8');
         this.editor.innerHTML = document;
         this.client_shadow = document;
+        this.local_change = document;
         break;
     }
     this.editor.focus();
@@ -208,32 +224,35 @@ export class Editor implements OnInit, ReplyListener {
   autoWrite() {
 
 
-    let shakespeare = 'FROM fairest creatures we desire increase,\n' +
-      'That thereby beauty\'s rose might never die,\n' +
-      'But as the riper should by time decease,\n' +
-      'His tender heir might bear his memory:\n' +
-      'But thou, contracted to thine own bright eyes,\n' +
-      'Feed\'st thy light\'st flame with self-substantial fuel,\n' +
-      'Making a famine where abundance lies,\n' +
-      'Thyself thy foe, to thy sweet self too cruel.\n' +
-      'Thou that art now the world\'s fresh ornament\n' +
-      'And only herald to the gaudy spring,\n' +
-      'Within thine own bud buriest thy content\n' +
-      'And, tender churl, makest waste in niggarding.\n' +
-      'Pity the world, or else this glutton be,\n' +
-      'To eat the world\'s due, by the grave and thee.';
+    let shakespeare = 'FROM fairest creatures we desire increase,' +
+      'That thereby beautys rose might never die, ' +
+      'But as the riper should by time decease,' +
+      'His tender heir might bear his memory: ' +
+      'But thou, contracted to thine own bright eyes,' +
+      'Feedst thy lightest flame with self-substantial fuel, ' +
+      'Making a famine where abundance lies, ' +
+      'Thyself thy foe, to thy sweet self too cruel. ' +
+      'Thou that art now the worlds fresh ornament ' +
+      'And only herald to the gaudy spring, ' +
+      'Within thine own bud buriest thy content' +
+      'And, tender churl, makest waste in niggarding. ' +
+      'Pity the world, or else this glutton be, ' +
+      'To eat the worlds due, by the grave and thee.';
 
-    let observable = Observable.interval(150);
+    let observable = Observable.interval(200);
     let subscription = observable.subscribe((num) => {
 
-      // part of Differential Synchronisation: create a Diff
-      let write = this.editor.innerHTML;
 
-      write = write + shakespeare.charAt(num);
+      if (num > shakespeare.length) {
+        subscription.unsubscribe();
+        return;
+      }
 
-      let d = this.dmp.diff_main(this.client_shadow, write);
+      this.editor.innerHTML = this.editor.innerHTML + shakespeare.charAt(num);
+
+      let d = this.dmp.diff_main(this.client_shadow, this.editor.innerHTML);
       this.dmp.diff_cleanupSemantic(d);
-      this.client_shadow = write;
+      this.client_shadow = this.editor.innerHTML;
 
       // Send write command to replica set
       this.editorProxy.invokeOrdered({operation: 'write', data: d}, this);
@@ -241,7 +260,6 @@ export class Editor implements OnInit, ReplyListener {
     });
 
   }
-
 
 }
 

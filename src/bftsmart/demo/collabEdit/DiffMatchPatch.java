@@ -1871,8 +1871,10 @@ public class DiffMatchPatch {
                 case INSERT:
                     patch.diffs.add(aDiff);
                     patch.length2 += aDiff.text.length();
-                    postpatch_text = postpatch_text.substring(0, char_count2)
+                    postpatch_text = postpatch_text.substring(0, char_count2) //FIXME
                             + aDiff.text + postpatch_text.substring(char_count2);
+                    // FIXME java.lang.StringIndexOutOfBoundsException: String index out of range: 674
+                    // FIXME at java.lang.String.substring(String.java:1963)
                     break;
                 case DELETE:
                     patch.length1 += aDiff.text.length();
