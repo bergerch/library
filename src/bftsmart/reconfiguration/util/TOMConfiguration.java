@@ -223,6 +223,7 @@ public class TOMConfiguration extends Configuration {
                 initialView = new int[n];
                 for (int i = 0; i < n; i++) {
                     initialView[i] = i;
+                    System.out.println("member "+i);
                 }
             } else {
                 StringTokenizer str = new StringTokenizer(s, ",");

@@ -11,6 +11,7 @@ import bftsmart.tom.server.defaultservices.DefaultRecoverable;
 import java.io.*;
 import java.util.LinkedList;
 
+import bftsmart.tom.util.Storage;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
@@ -31,11 +32,24 @@ public class collabEditServer extends DefaultRecoverable implements Replier {
 
     JSONParser parser = new JSONParser();
 
-    public collabEditServer(int id) {
-        replica = new ServiceReplica(id, this, this, null, this);
+    //** Debug and Performance fields */
+    boolean verbose;
+    private int interval = 1000;
+    private int iterations = 0;
+    private Storage totalLatency = null;
+    private Storage executeLatency = null;
+    private float maxTp = -1;
+    private long throughputMeasurementStartTime = System.currentTimeMillis();
+
+
+    public collabEditServer(int id, boolean verbose) {
         for (int i = 0; i < subscribers.length; i++) {
             subscribers[i] = -1;
         }
+        replica = new ServiceReplica(id, this, this, null, this);
+        this.verbose = false;
+        totalLatency = new Storage(interval);
+        executeLatency = new Storage(interval);
     }
 
     public static void main(String[] args) {
@@ -43,7 +57,15 @@ public class collabEditServer extends DefaultRecoverable implements Replier {
             System.out.println("Expected <processId>");
             System.exit(-1);
         }
-        new bftsmart.demo.collabEdit.collabEditServer(Integer.parseInt(args[0]));
+        boolean verbose = false;
+        if (args.length > 1) {
+            try {
+                verbose = Boolean.parseBoolean(args[1]);
+            } catch (Exception kA) {
+                // Do nothing
+            }
+        }
+        new bftsmart.demo.collabEdit.collabEditServer(Integer.parseInt(args[0]), verbose);
     }
 
     @Override
@@ -62,11 +84,38 @@ public class collabEditServer extends DefaultRecoverable implements Replier {
     @Override
     public byte[] appExecuteUnordered(byte[] command, MessageContext msgCtx) {
 
-        System.out.println(" Reading..." + document);
+        print(" Reading..." + document);
         return documentToByte();
     }
 
     private byte[] executeSingle(byte[] command, MessageContext msgCtx) {
+
+        /** BEGIN Performance measurement */
+
+        iterations++;
+       // if (msgCtx != null && msgCtx.getFirstInBatch() != null) {
+           // msgCtx.getFirstInBatch().executedTime = System.nanoTime();
+           // totalLatency.store(msgCtx.getFirstInBatch().executedTime - msgCtx.getFirstInBatch().receptionTime);
+       // }
+        float tp = -1;
+        if(iterations % interval == 0) {
+            System.out.println("--- Measurements after "+ iterations+" ops ("+interval+" samples) ---");
+            tp = (float)(interval*1000/(float)(System.currentTimeMillis()-throughputMeasurementStartTime));
+            if (tp > maxTp) maxTp = tp;
+            System.out.println("Throughput = " + tp +" operations/sec (Maximum observed: " + maxTp + " ops/sec)");
+            // System.out.println("Total latency = " + totalLatency.getAverage(false) / 1000 + " (+/- "+ (long)totalLatency.getDP(false) / 1000 +") us ");
+            //float exeT = (float) executeLatency.getAverage(false);
+            //System.out.println("Execute Time = "+ exeT);
+
+            totalLatency.reset();
+            executeLatency.reset();
+            throughputMeasurementStartTime = System.currentTimeMillis();
+        }
+       // long appStartTime = System.currentTimeMillis();
+
+        /** END Performance measurement */
+
+        /** BEGIN Application logic  */
 
         JSONObject jsonObject = new JSONObject();
         String operation = "";
@@ -88,14 +137,14 @@ public class collabEditServer extends DefaultRecoverable implements Replier {
         switch (operation) {
             case "subscribe":
                 addSubscriber(msgCtx.getSender(), event);
-                System.out.println(" Added subscriber " + msgCtx.getSender() + " for event " + event);
+                print(" Added subscriber " + msgCtx.getSender() + " for event " + event);
                 break;
             case "unsubscribe":
                 removeSubscriber(msgCtx.getSender(), event);
-                System.out.println(" Added subscriber " + msgCtx.getSender() + " for event " + event);
+                print(" Added subscriber " + msgCtx.getSender() + " for event " + event);
                 break;
             case "write":
-                System.out.println(" Writing...");
+                print(" Writing...");
                 // Differential Synchronisation algorithm starts here
                 LinkedList<DiffMatchPatch.Diff> diffs = new LinkedList<>();
                 JSONArray data = (JSONArray) jsonObject.get("data");
@@ -114,37 +163,41 @@ public class collabEditServer extends DefaultRecoverable implements Replier {
                     patch = dmp.patch_make(this.document, diffs);
                 } catch (Exception e) {
                     // Changes could not be applied, notify client about this
-                    System.out.println("  Exception was thrown in patch_make(), document was not changed");
+                    print("  Exception was thrown in patch_make(), document was not changed");
+                    //long appEndtTime = System.currentTimeMillis();
+                    //executeLatency.store(appEndtTime-appStartTime);
                     return documentToByte();
                 }
 
-                System.out.println("----Applying Patch----");
-                System.out.println(patch);
+                print("----Applying Patch----");
+                print(patch.toString());
 
                 // Apply Patch
                 this.document = (String) dmp.patch_apply(patch, this.document)[0];
-                System.out.println("----Patch applied!---");
+                print("----Patch applied!---");
 
                 // Create Diffs, document_shadow <- updated_document
                 edits = dmp.diff_main(this.server_shadow, this.document);
                 dmp.diff_cleanupSemantic(edits);
                 this.document.replaceAll("\"", "");
                 this.server_shadow = this.document;
-                System.out.println("Document changed to: " + document);
+                print("Document changed to: " + document);
 
                 // Distribute changes to all subscribed clients
                 break;
             case "read":
-                System.out.println(" Reading ordered...");
+                print(" Reading ordered...");
                 // Ordered (!) read-request
                 break;
             default:
-                System.out.println(" INVALID Operation! See Server API");
+                print(" INVALID Operation! See Server API");
                 break;
         }
+        /** END Application logic  */
+        //long appEndtTime = System.currentTimeMillis();
+        //executeLatency.store(appEndtTime-appStartTime);
 
         return operation.equals("write") ? diffsToBytes(edits) : documentToByte();
-
     }
 
     @SuppressWarnings("unchecked")
@@ -170,7 +223,7 @@ public class collabEditServer extends DefaultRecoverable implements Replier {
 
         // FIXME
         try {
-            System.out.println("getState called");
+            print("getState called");
             ByteArrayOutputStream bos = new ByteArrayOutputStream();
             ObjectOutput out = new ObjectOutputStream(bos);
             out.writeUTF(document);
@@ -215,7 +268,7 @@ public class collabEditServer extends DefaultRecoverable implements Replier {
             return res.getBytes("UTF-8");
         } catch (UnsupportedEncodingException e) {
             e.printStackTrace();
-            System.out.println("ERROR ENCODING NOT SUPPORTED!!!!!");
+            print("ERROR ENCODING NOT SUPPORTED!!!!!");
             return res.getBytes();
         }
     }
@@ -229,19 +282,19 @@ public class collabEditServer extends DefaultRecoverable implements Replier {
             request.reply.setEvent("onDocChange");
 
         if (request.getReqType() == TOMMessageType.UNORDERED_REQUEST) {
-            System.out.println("Self-Send back");
+            print("Self-Send back");
             int[] replyManagement = new int[1];
             replyManagement[0] = request.getSender();
             rc.getServerCommunicationSystem().send(replyManagement, request.reply);
             return;
         } else {
-            System.out.println("Group-Send back");
+            print("Group-Send back");
             rc.getServerCommunicationSystem().send(subscribers, request.reply);
         }
 
-        System.out.println();
-        System.out.println("__________________________________________");
-        System.out.println();
+        print();
+        print("__________________________________________");
+        print();
 
     }
 
@@ -276,7 +329,7 @@ public class collabEditServer extends DefaultRecoverable implements Replier {
             }
         }
         subscriptionCount = removed ? subscriptionCount-- : subscriptionCount;
-        System.out.println("Now subscribers are " + printSubscriber());
+        print("Now subscribers are " + printSubscriber());
     }
 
 
@@ -291,7 +344,17 @@ public class collabEditServer extends DefaultRecoverable implements Replier {
             subscribers[subscriptionCount] = sender;
             subscriptionCount++;
         }
-        System.out.println("Now subscribers are " + printSubscriber());
+        print("Now subscribers are " + printSubscriber());
     }
 
+
+    void print() {
+        if(verbose)
+            System.out.println();
+    }
+
+    void print(String s) {
+        if(verbose)
+            System.out.println(s);
+    }
 }
