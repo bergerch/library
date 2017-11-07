@@ -14,23 +14,44 @@ import {ReplyListener} from "../../bft/communication/ReplyListener.interface";
 })
 export class Editor implements OnInit, ReplyListener {
 
-  editor;
 
+  /** Editor Application member variables */
+  editor;
   editorObservable: Observable<any>;
   editorSubscription: Subscription;
-
   client_shadow;
-
   cursorPosition;
-
   range;
   subscribed: boolean;
-
   local_change;
   dmp;
 
-  constructor(private editorProxy: ServiceProxy) {
-  }
+  /** Performance measurement fields, only used for evaluation purpose */
+  numberOfOps: number = 5000; // How many operations each client executs e.g. the number of requests
+  interval: number = 10; // Milliseconds a client waits before sending the next request
+  readOnly: boolean = false; // If client should send read-only requests instead of ordered requests
+  progress: number = 0; // For progress bar
+  output;
+  started: boolean = false;
+  opsPerSecond: number = 0;
+  lastTime = window.performance.now();
+  measureLatency: boolean = false;
+  requestObservable: Observable<any>;
+  requestSubscription: Subscription;
+  requestSent = 0;
+  requestReceived = 0;
+  requestsSentTime: Map<number, number> = new Map();
+  requestsReceivedTime: Map<number, number> = new Map();
+  averageLatencyAll: number = 0;
+  maxLatency: number = 0;
+  minLatency: number = 0;
+  averageLatency_1st_decile: number = 0;
+  averageLatency_10nd_decile: number = 0;
+  standard_deviation: number = 0;
+  statisticComputed: boolean = false;
+
+
+  constructor(private editorProxy: ServiceProxy) {}
 
 
   ngOnInit() {
@@ -84,6 +105,18 @@ export class Editor implements OnInit, ReplyListener {
   }
 
   replyReceived(sm: TOMMessage) {
+
+    /// IfDef Performance measurement
+    this.requestReceived++;
+    if (this.requestReceived >= this.numberOfOps / 2) {
+      this.requestsReceivedTime.set(sm.sequence, window.performance.now());
+    }
+    // Last reply arrived
+    if (sm.sequence == this.numberOfOps - 1) {
+      console.log('compute Statistic');
+      this.computeStatistic();
+    }
+    /// EndIfDef
 
     // Fix cursor position
     let cursorPosition = this.getCurrentCursorPosition('editor');
@@ -259,6 +292,143 @@ export class Editor implements OnInit, ReplyListener {
 
     });
 
+  }
+
+
+  /**
+   *  Evaluation purpose
+   */
+  autoWritePerformanceMeasurement() {
+
+
+    let shakespeare = 'FROM fairest creatures we desire increase,' +
+      'That thereby beautys rose might never die, ' +
+      'But as the riper should by time decease,' +
+      'His tender heir might bear his memory: ' +
+      'But thou, contracted to thine own bright eyes,' +
+      'Feedst thy lightest flame with self-substantial fuel, ' +
+      'Making a famine where abundance lies, ' +
+      'Thyself thy foe, to thy sweet self too cruel. ' +
+      'Thou that art now the worlds fresh ornament ' +
+      'And only herald to the gaudy spring, ' +
+      'Within thine own bud buriest thy content' +
+      'And, tender churl, makest waste in niggarding. ' +
+      'Pity the world, or else this glutton be, ' +
+      'To eat the worlds due, by the grave and thee.';
+
+    this.requestReceived = 0;
+    this.requestObservable = Observable.interval(this.interval);
+    this.requestSubscription = this.requestObservable.subscribe((num) => {
+      if (this.requestSent < this.numberOfOps) {
+        this.requestSent++;
+        let sequence;
+        if (this.readOnly) {
+          sequence = this.editorProxy.invokeUnordered({operation: 'read'}, this);
+        } else {
+          this.editor.innerHTML = this.editor.innerHTML + shakespeare.charAt(num % shakespeare.length);
+          let d = this.dmp.diff_main(this.client_shadow, this.editor.innerHTML);
+          this.dmp.diff_cleanupSemantic(d);
+          this.client_shadow = this.editor.innerHTML;
+
+          // Send write command to replica set
+          sequence = this.editorProxy.invokeOrdered({operation: 'write', data: d}, this);
+        }
+        if (this.requestSent % 100 == 0) {
+          let newTime = window.performance.now();
+          let diff = newTime - this.lastTime;
+          let time1Req = diff / 100;
+          let numReq = 1000 / time1Req;
+          this.opsPerSecond = Math.floor(numReq);
+          this.lastTime = window.performance.now();
+          this.progress = this.requestSent / this.numberOfOps * 100;
+
+        }
+        if (this.requestSent >= this.numberOfOps / 2) {
+          this.requestsSentTime.set(sequence, window.performance.now());
+        }
+      } else {
+        this.requestSubscription.unsubscribe();
+      }
+    });
+
+  }
+
+  computeStatistic() {
+
+    let latencies: Map<number, number> = new Map();
+    // Compute all latencies
+    let k = 0;
+    for (let i = this.numberOfOps / 2; i < this.numberOfOps / 2 + this.requestsReceivedTime.size; i++) {
+      if (this.requestsReceivedTime.get(i)) {
+        // latency[request_i] = T_req_Received[i] - T_req_Sent[i]
+        let latency = this.requestsReceivedTime.get(i) - this.requestsSentTime.get(i);
+        latency = Math.round(latency * 1000) / 1000;
+        latencies.set(k, latency);
+        k++;
+        //console.log(latency);
+      }
+    }
+
+    // Compute average Latency of all latencies
+    let s = 0;
+    for (let i = 0; i < latencies.size; i++) {
+      s += latencies.get(i);
+    }
+    this.averageLatencyAll = s / latencies.size;
+    this.averageLatencyAll = Math.round(this.averageLatencyAll * 100) / 100;
+
+
+    // Compute max Latency
+    let max = 0;
+    for (let i = 0; i < latencies.size; i++) {
+      if (latencies.get(i) > max)
+        max = latencies.get(i);
+    }
+    this.maxLatency = max;
+
+    // Compute min Latency
+    let min = 99999999;
+    for (let i = 0; i < latencies.size; i++) {
+      if (latencies.get(i) < min)
+        min = latencies.get(i);
+    }
+    this.minLatency = min;
+
+
+    let latenciesAsc = [];
+
+    for (let i = 0; i < latencies.size; i++) {
+      latenciesAsc[i] = latencies.get(i);
+    }
+    latenciesAsc.sort((a,b) => {return a-b});
+    console.log(latenciesAsc);
+
+    // Compute averages latency of fastest 10%
+    s = 0;
+    for (let i = 0; i < latenciesAsc.length / 10; i++) {
+      s += latenciesAsc[i];
+    }
+    this.averageLatency_1st_decile = s / (latenciesAsc.length / 10);
+    this.averageLatency_1st_decile = Math.round(this.averageLatency_1st_decile * 100) / 100;
+
+    // Compute averages latency of slowest 10%
+    s = 0;
+    for (let i = latenciesAsc.length - latenciesAsc.length / 10; i < latenciesAsc.length; i++) {
+      s += latenciesAsc[i];
+    }
+    this.averageLatency_10nd_decile = s / (latenciesAsc.length / 10);
+    this.averageLatency_10nd_decile = Math.round(this.averageLatency_10nd_decile * 100) / 100;
+
+    // Compute standard deviation
+    s = 0;
+    let n = latencies.size;
+    for (let i = 0; i < n; i++) {
+      s += (latencies.get(i) - this.averageLatencyAll) * (latencies.get(i) - this.averageLatencyAll);
+    }
+    this.standard_deviation = Math.sqrt(s / n);
+    this.standard_deviation = Math.round(this.standard_deviation * 100) / 100;
+
+    this.statisticComputed = true;
   }
 
 }

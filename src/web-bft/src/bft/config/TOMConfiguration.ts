@@ -25,10 +25,10 @@ export class TOMConfiguration {
   /** Hosts Configurations */
 
   hosts: Host[] = [
-    {server_id: 0, address: '127.0.0.1', port: 11005},
-    {server_id: 1, address: '127.0.0.1', port: 11015},
-    {server_id: 2, address: '127.0.0.1', port: 11025},
-    {server_id: 3, address: '127.0.0.1', port: 11035}
+    {server_id: 0, address: '127.0.0.1', port: 11005}
+  //  {server_id: 1, address: '127.0.0.1', port: 11015},
+  //  {server_id: 2, address: '127.0.0.1', port: 11025},
+  //  {server_id: 3, address: '127.0.0.1', port: 11035}
     /*
     ,
     {server_id: 4, address: '127.0.0.1', port: 11045},
@@ -46,7 +46,7 @@ export class TOMConfiguration {
 
     // Replicas ID for the initial view, separated by a comma.
     // The number of replicas in this parameter should be equal to that specified in 'system.servers.num'
-  initial_view = [0, 1, 2, 3];
+  initial_view = [0];
 
   // The ID of the trust third party (TTP)
   ttp_id = 7002;
@@ -72,10 +72,10 @@ export class TOMConfiguration {
   /** Replication Algorithm Configurations */
 
     // Number of servers in the group
-  n = 4;
+  n = 1;
 
   // Maximum number of faulty replicas
-  f = 1;
+  f = 0;
 
   // Timeout to asking for a client request
   timeout = 2000;
@@ -125,4 +125,4 @@ export class TOMConfiguration {
   // Number of ahead-of-time messages necessary to trigger the state transfer after a request timeout occurs
   timeout_highMark = 200;
 
-} 
+}
