@@ -26,12 +26,20 @@ public class AsynchServiceProxy extends ServiceProxy{
 
 
 	/**
+	 *
+	 */
+	private Hashtable<String, RequestContext> subscriptionContext;
+
+
+
+	/**
 	 * 
 	 * @param processId Replica id
 	 */
 	public AsynchServiceProxy(int processId) {
 		this(processId, null);
                 requestsContext =  new Hashtable<Integer, RequestContext>();
+                subscriptionContext = new Hashtable<String, RequestContext>();
 	}
 
 	/**
@@ -82,7 +90,41 @@ public class AsynchServiceProxy extends ServiceProxy{
 		requestsContext.remove(requestId);
 	}
 
-	
+
+	/**
+	 *
+	 * @param request
+	 * @param replyListener
+	 * @param reqType Request type
+	 * @return
+	 */
+	public int invokeAsynchronousSubscription(byte[] request, ReplyListener replyListener, TOMMessageType reqType, String subscription) {
+
+
+		int[] targets = super.getViewManager().getCurrentViewProcesses();
+		Logger.println("Asynchronously sending subscribe request to " + Arrays.toString(targets));
+		RequestContext requestContext = null;
+
+		canSendLock.lock();
+		requestContext = new RequestContext(generateRequestId(reqType), generateOperationId(),
+				reqType, targets, System.currentTimeMillis(), replyListener);
+
+		try {
+			Logger.println("Storing subscription request context for " + requestContext.getReqId());
+			subscriptionContext.put(subscription, requestContext);
+			sendMessageToTargets(request, requestContext.getReqId(), requestContext.getOperationId(), targets, reqType);
+
+		} finally {
+			canSendLock.unlock();
+		}
+
+		return requestContext.getReqId();
+
+
+	}
+
+
+
 	/**
 	 * 
 	 */
@@ -93,7 +135,15 @@ public class AsynchServiceProxy extends ServiceProxy{
         try {
 			canReceiveLock.lock();
 
+
+
 			RequestContext requestContext = requestsContext.get(reply.getSequence());
+			boolean isSubscription = false;
+
+			if (requestContext == null && (subscriptionContext.get(reply.getEvent()) != null)) {
+				requestContext = subscriptionContext.get(reply.getEvent());
+				isSubscription = true;
+			}
 
 			if(requestContext == null){ // it is not a asynchronous request
 				super.replyReceived(reply);
@@ -101,7 +151,7 @@ public class AsynchServiceProxy extends ServiceProxy{
 			}
 
 			if ( contains(requestContext.getTargets(), reply.getSender()) && 
-					(reply.getSequence() == requestContext.getReqId()) &&
+					(reply.getSequence() == requestContext.getReqId() || isSubscription) &&
 					(reply.getReqType().compareTo(requestContext.getRequestType())) == 0 ) {
 				
                             Logger.println("Deliverying message from " + reply.getSender() + " with sequence number " + reply.getSequence() + " to the listener");

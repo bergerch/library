@@ -17,7 +17,15 @@ import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
 
-public class collabEditServer extends DefaultRecoverable implements Replier {
+import javax.management.Attribute;
+import javax.management.AttributeList;
+import javax.management.MBeanServer;
+import javax.management.ObjectName;
+import java.lang.management.ManagementFactory;
+import java.lang.management.OperatingSystemMXBean;
+import java.lang.management.ThreadMXBean;
+
+public class CollabEditServer extends DefaultRecoverable implements Replier {
 
     private ReplicaContext rc;
     ServiceReplica replica = null;
@@ -40,16 +48,20 @@ public class collabEditServer extends DefaultRecoverable implements Replier {
     private Storage executeLatency = null;
     private float maxTp = -1;
     private long throughputMeasurementStartTime = System.currentTimeMillis();
+    private ThreadMXBean threadBean = ManagementFactory.getThreadMXBean();
+    private OperatingSystemMXBean opBean = ManagementFactory.getOperatingSystemMXBean();
 
 
-    public collabEditServer(int id, boolean verbose) {
+    public CollabEditServer(int id, boolean verbose) {
         for (int i = 0; i < subscribers.length; i++) {
             subscribers[i] = -1;
         }
         replica = new ServiceReplica(id, this, this, null, this);
-        this.verbose = false;
+        this.verbose = verbose;
         totalLatency = new Storage(interval);
         executeLatency = new Storage(interval);
+
+
     }
 
     public static void main(String[] args) {
@@ -57,7 +69,7 @@ public class collabEditServer extends DefaultRecoverable implements Replier {
             System.out.println("Expected <processId>");
             System.exit(-1);
         }
-        boolean verbose = false;
+        boolean verbose = true;
         if (args.length > 1) {
             try {
                 verbose = Boolean.parseBoolean(args[1]);
@@ -65,7 +77,7 @@ public class collabEditServer extends DefaultRecoverable implements Replier {
                 // Do nothing
             }
         }
-        new bftsmart.demo.collabEdit.collabEditServer(Integer.parseInt(args[0]), verbose);
+        new CollabEditServer(Integer.parseInt(args[0]), verbose);
     }
 
     @Override
@@ -92,6 +104,7 @@ public class collabEditServer extends DefaultRecoverable implements Replier {
 
         /** BEGIN Performance measurement */
 
+        /*
         iterations++;
        // if (msgCtx != null && msgCtx.getFirstInBatch() != null) {
            // msgCtx.getFirstInBatch().executedTime = System.nanoTime();
@@ -106,6 +119,13 @@ public class collabEditServer extends DefaultRecoverable implements Replier {
             // System.out.println("Total latency = " + totalLatency.getAverage(false) / 1000 + " (+/- "+ (long)totalLatency.getDP(false) / 1000 +") us ");
             //float exeT = (float) executeLatency.getAverage(false);
             //System.out.println("Execute Time = "+ exeT);
+
+            try {
+                System.out.println("CPU LOAD " + (float) getProcessCpuLoad());
+            } catch (Exception e) {
+
+            }
+
 
             totalLatency.reset();
             executeLatency.reset();
@@ -356,5 +376,22 @@ public class collabEditServer extends DefaultRecoverable implements Replier {
     void print(String s) {
         if(verbose)
             System.out.println(s);
+    }
+
+    public static double getProcessCpuLoad() throws Exception {
+
+        MBeanServer mbs    = ManagementFactory.getPlatformMBeanServer();
+        ObjectName name    = ObjectName.getInstance("java.lang:type=OperatingSystem");
+        AttributeList list = mbs.getAttributes(name, new String[]{ "ProcessCpuLoad" });
+
+        if (list.isEmpty())     return Double.NaN;
+
+        Attribute att = (Attribute)list.get(0);
+        Double value  = (Double)att.getValue();
+
+        // usually takes a couple of seconds before we get real values
+        if (value == -1.0)      return Double.NaN;
+        // returns a percentage value with 1 decimal point precision
+        return ((int)(value * 1000) / 10.0);
     }
 }

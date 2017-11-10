@@ -149,6 +149,7 @@ export class Editor implements OnInit, ReplyListener {
 
         break;
       case 'read':
+      case 'subscribe':
         console.log('Reading...');
         let document = buff.toString('utf8');
         this.editor.innerHTML = document;
