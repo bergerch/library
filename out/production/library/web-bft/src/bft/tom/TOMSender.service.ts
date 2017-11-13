@@ -99,6 +99,9 @@ export abstract class TOMSender implements Closeable {
     return this.opCounter;
   }
 
+  getId() {
+    return this.me;
+  }
 
   /**
    * Multicast a TOMMessage.ts to the group of replicas

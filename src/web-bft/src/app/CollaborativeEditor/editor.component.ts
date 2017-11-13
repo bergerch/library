@@ -4,6 +4,7 @@ import {ServiceProxy} from "../../bft/tom/ServiceProxy.service";
 import {TOMConfiguration} from "../../bft/config/TOMConfiguration";
 import {TOMMessage} from "../../bft/tom/messages/TOMMessage";
 import {ReplyListener} from "../../bft/communication/ReplyListener.interface";
+import {Router} from "@angular/router";
 
 
 @Component({
@@ -25,10 +26,11 @@ export class Editor implements OnInit, ReplyListener {
   subscribed: boolean;
   local_change;
   dmp;
+  id;
 
   /** Performance measurement fields, only used for evaluation purpose */
-  numberOfOps: number = 5000; // How many operations each client executs e.g. the number of requests
-  interval: number = 10; // Milliseconds a client waits before sending the next request
+  numberOfOps: number = 500; // How many operations each client executs e.g. the number of requests
+  interval: number = 50; // Milliseconds a client waits before sending the next request
   readOnly: boolean = false; // If client should send read-only requests instead of ordered requests
   progress: number = 0; // For progress bar
   output;
@@ -51,7 +53,12 @@ export class Editor implements OnInit, ReplyListener {
   statisticComputed: boolean = false;
 
 
-  constructor(private editorProxy: ServiceProxy) {}
+  constructor(private editorProxy: ServiceProxy,  router: Router) {
+    this.id = this.editorProxy.getId();
+    let url = router.url.toString();
+    this.measureLatency = url.charAt(url.length - 1) == 'l';
+    console.log(this.measureLatency);
+  }
 
 
   ngOnInit() {
@@ -81,7 +88,9 @@ export class Editor implements OnInit, ReplyListener {
       this.client_shadow = write;
 
       // Send write command to replica set
+
       this.editorProxy.invokeOrdered({operation: 'write', data: d}, this);
+
     });
 
     this.editor.addEventListener('click', (e) => {
@@ -106,15 +115,19 @@ export class Editor implements OnInit, ReplyListener {
 
   replyReceived(sm: TOMMessage) {
 
+    // Perf. Measurement seq numbers start at 1,000,000
     /// IfDef Performance measurement
-    this.requestReceived++;
-    if (this.requestReceived >= this.numberOfOps / 2) {
-      this.requestsReceivedTime.set(sm.sequence, window.performance.now());
-    }
-    // Last reply arrived
-    if (sm.sequence == this.numberOfOps - 1) {
-      console.log('compute Statistic');
-      this.computeStatistic();
+    if (sm.content.requester === this.id) {
+      this.requestReceived++;
+      if (this.requestReceived >= this.numberOfOps / 2) {
+        this.requestsReceivedTime.set(sm.sequence, window.performance.now());
+      }
+      // Last reply arrived
+      if (sm.sequence == this.numberOfOps - 1) {
+        console.log('compute Statistic');
+        this.computeStatistic();
+        this.editorProxy.invokeOrdered({operation: 'latency-measurement', data: this.averageLatencyAll}, this);
+      }
     }
     /// EndIfDef
 
@@ -301,7 +314,6 @@ export class Editor implements OnInit, ReplyListener {
    */
   autoWritePerformanceMeasurement() {
 
-
     let shakespeare = 'FROM fairest creatures we desire increase,' +
       'That thereby beautys rose might never die, ' +
       'But as the riper should by time decease,' +
@@ -333,6 +345,7 @@ export class Editor implements OnInit, ReplyListener {
 
           // Send write command to replica set
           sequence = this.editorProxy.invokeOrdered({operation: 'write', data: d}, this);
+
         }
         if (this.requestSent % 100 == 0) {
           let newTime = window.performance.now();
@@ -345,7 +358,9 @@ export class Editor implements OnInit, ReplyListener {
 
         }
         if (this.requestSent >= this.numberOfOps / 2) {
-          this.requestsSentTime.set(sequence, window.performance.now());
+          if (this.measureLatency) {
+             this.requestsSentTime.set(sequence, window.performance.now());
+          }
         }
       } else {
         this.requestSubscription.unsubscribe();

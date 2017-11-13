@@ -9,6 +9,7 @@ import bftsmart.tom.server.Replier;
 import bftsmart.tom.server.defaultservices.DefaultRecoverable;
 
 import java.io.*;
+import java.util.HashMap;
 import java.util.LinkedList;
 
 import bftsmart.tom.util.Storage;
@@ -42,14 +43,19 @@ public class CollabEditServer extends DefaultRecoverable implements Replier {
 
     //** Debug and Performance fields */
     boolean verbose;
-    private int interval = 1000;
+    private int interval = 100;
     private int iterations = 0;
     private Storage totalLatency = null;
     private Storage executeLatency = null;
     private float maxTp = -1;
-    private long throughputMeasurementStartTime = System.currentTimeMillis();
+    private long startTime = System.currentTimeMillis();
+    private long currentTime = System.currentTimeMillis();
+    private long appStartTime = System.currentTimeMillis();
     private ThreadMXBean threadBean = ManagementFactory.getThreadMXBean();
     private OperatingSystemMXBean opBean = ManagementFactory.getOperatingSystemMXBean();
+    int ops;
+    double client_latency = -1;
+    HashMap<Integer, Integer> simultanWritingClients = new HashMap<>();
 
 
     public CollabEditServer(int id, boolean verbose) {
@@ -60,7 +66,6 @@ public class CollabEditServer extends DefaultRecoverable implements Replier {
         this.verbose = verbose;
         totalLatency = new Storage(interval);
         executeLatency = new Storage(interval);
-
 
     }
 
@@ -97,41 +102,55 @@ public class CollabEditServer extends DefaultRecoverable implements Replier {
     public byte[] appExecuteUnordered(byte[] command, MessageContext msgCtx) {
 
         print(" Reading..." + document);
-        return documentToByte();
+        return documentToByte(msgCtx.getSender());
     }
 
     private byte[] executeSingle(byte[] command, MessageContext msgCtx) {
 
         /** BEGIN Performance measurement */
 
-        /*
         iterations++;
-       // if (msgCtx != null && msgCtx.getFirstInBatch() != null) {
-           // msgCtx.getFirstInBatch().executedTime = System.nanoTime();
-           // totalLatency.store(msgCtx.getFirstInBatch().executedTime - msgCtx.getFirstInBatch().receptionTime);
-       // }
+        ops++;
+        // if (msgCtx != null && msgCtx.getFirstInBatch() != null) {
+        // msgCtx.getFirstInBatch().executedTime = System.nanoTime();
+        // totalLatency.store(msgCtx.getFirstInBatch().executedTime - msgCtx.getFirstInBatch().receptionTime);
+        // }
         float tp = -1;
-        if(iterations % interval == 0) {
-            System.out.println("--- Measurements after "+ iterations+" ops ("+interval+" samples) ---");
-            tp = (float)(interval*1000/(float)(System.currentTimeMillis()-throughputMeasurementStartTime));
+
+        Integer i = msgCtx.getSender();
+        if(!simultanWritingClients.containsKey(i)) {
+            simultanWritingClients.put(i,i);
+        }
+
+        currentTime = System.currentTimeMillis();
+        if (currentTime > startTime + 1000) {
+
+            System.out.println();
+            System.out.println("--- Measurements at "+ (((float)((long)currentTime - appStartTime))/1000) + " s ");
+            System.out.println("System Time = " + currentTime);
+            tp = (float)(ops*1000/(float)(currentTime-startTime));
+            int simWritingClients = simultanWritingClients.size();
             if (tp > maxTp) maxTp = tp;
+            System.out.println("# Clients writing = " + simWritingClients);
+            System.out.println(ops + " Patches computed");
             System.out.println("Throughput = " + tp +" operations/sec (Maximum observed: " + maxTp + " ops/sec)");
+            System.out.println("Client latency: " + this.client_latency);
             // System.out.println("Total latency = " + totalLatency.getAverage(false) / 1000 + " (+/- "+ (long)totalLatency.getDP(false) / 1000 +") us ");
             //float exeT = (float) executeLatency.getAverage(false);
             //System.out.println("Execute Time = "+ exeT);
 
             try {
-                System.out.println("CPU LOAD " + (float) getProcessCpuLoad());
+                System.out.println("CPU LOAD = " + (float) getProcessCpuLoad());
             } catch (Exception e) {
 
             }
-
-
             totalLatency.reset();
             executeLatency.reset();
-            throughputMeasurementStartTime = System.currentTimeMillis();
+            startTime = System.currentTimeMillis();
+            ops = 0;
+            simultanWritingClients.clear();
         }
-       // long appStartTime = System.currentTimeMillis();
+
 
         /** END Performance measurement */
 
@@ -152,6 +171,8 @@ public class CollabEditServer extends DefaultRecoverable implements Replier {
         } catch (ParseException e) {
             e.printStackTrace();
         }
+
+        int requester = msgCtx.getSender();
 
         // API: subscribe / unsubscribe / write / read (ordered)
         switch (operation) {
@@ -186,7 +207,7 @@ public class CollabEditServer extends DefaultRecoverable implements Replier {
                     print("  Exception was thrown in patch_make(), document was not changed");
                     //long appEndtTime = System.currentTimeMillis();
                     //executeLatency.store(appEndtTime-appStartTime);
-                    return documentToByte();
+                    return documentToByte(requester);
                 }
 
                 print("----Applying Patch----");
@@ -209,6 +230,10 @@ public class CollabEditServer extends DefaultRecoverable implements Replier {
                 print(" Reading ordered...");
                 // Ordered (!) read-request
                 break;
+            case "latency-measurement":
+                // Client transmitted its latency measurement results
+                client_latency = (double) jsonObject.get("data");
+                break;
             default:
                 print(" INVALID Operation! See Server API");
                 break;
@@ -217,7 +242,7 @@ public class CollabEditServer extends DefaultRecoverable implements Replier {
         //long appEndtTime = System.currentTimeMillis();
         //executeLatency.store(appEndtTime-appStartTime);
 
-        return operation.equals("write") ? diffsToBytes(edits) : documentToByte();
+        return operation.equals("write") ? diffsToBytes(edits, requester) : documentToByte(requester);
     }
 
     @SuppressWarnings("unchecked")
@@ -259,8 +284,9 @@ public class CollabEditServer extends DefaultRecoverable implements Replier {
         }
     }
 
-    private byte[] diffsToBytes(LinkedList<DiffMatchPatch.Diff> edits) {
+    private byte[] diffsToBytes(LinkedList<DiffMatchPatch.Diff> edits, int requester) {
         String dataString = "[";
+        String issuer =  "\"requester\":"+ requester;
         int k = 0;
         for (DiffMatchPatch.Diff edit : edits) {
             String a = "[";
@@ -276,14 +302,15 @@ public class CollabEditServer extends DefaultRecoverable implements Replier {
         dataString+="]";
         String command = "\"operation\":\"write\"";
         String data =  "\"data\":"+ dataString;
-        String res = "{"+command+","+data+"}";
+        String res = "{"+command+","+data+","+ issuer+"}";
         return res.getBytes();
     }
 
-    private byte[] documentToByte() {
+    private byte[] documentToByte(int requester) {
         String command = "\"operation\":\"read\"";
         String data =  "\"data\":\""+ this.document+"\"";
-        String res = "{"+command+","+data+"}";
+        String issuer =  "\"requester\":"+ requester;
+        String res = "{"+command+","+data+","+ issuer+"}";
         try {
             return res.getBytes("UTF-8");
         } catch (UnsupportedEncodingException e) {
