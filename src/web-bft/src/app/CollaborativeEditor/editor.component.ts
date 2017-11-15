@@ -29,7 +29,7 @@ export class Editor implements OnInit, ReplyListener {
   id;
 
   /** Performance measurement fields, only used for evaluation purpose */
-  numberOfOps: number = 500; // How many operations each client executs e.g. the number of requests
+  numberOfOps: number = 1010; // How many operations each client executs e.g. the number of requests
   interval: number = 50; // Milliseconds a client waits before sending the next request
   readOnly: boolean = false; // If client should send read-only requests instead of ordered requests
   progress: number = 0; // For progress bar
@@ -44,13 +44,16 @@ export class Editor implements OnInit, ReplyListener {
   requestReceived = 0;
   requestsSentTime: Map<number, number> = new Map();
   requestsReceivedTime: Map<number, number> = new Map();
-  averageLatencyAll: number = 0;
+  averageLatencyAll: number = -1;
   maxLatency: number = 0;
   minLatency: number = 0;
   averageLatency_1st_decile: number = 0;
   averageLatency_10nd_decile: number = 0;
   standard_deviation: number = 0;
   statisticComputed: boolean = false;
+  sampleRate: number = 10;
+  sampleCount: number = 0;
+
 
 
   constructor(private editorProxy: ServiceProxy,  router: Router) {
@@ -58,6 +61,8 @@ export class Editor implements OnInit, ReplyListener {
     let url = router.url.toString();
     this.measureLatency = url.charAt(url.length - 1) == 'l';
     console.log(this.measureLatency);
+    this.sampleRate =  1000 / this.interval;
+    console.log('sample Rate ', this.sampleRate);
   }
 
 
@@ -94,7 +99,7 @@ export class Editor implements OnInit, ReplyListener {
     });
 
     this.editor.addEventListener('click', (e) => {
-      console.log(this.getCurrentCursorPosition('editor'));
+     // console.log(this.getCurrentCursorPosition('editor'));
     });
 
   }
@@ -115,25 +120,10 @@ export class Editor implements OnInit, ReplyListener {
 
   replyReceived(sm: TOMMessage) {
 
-    // Perf. Measurement seq numbers start at 1,000,000
-    /// IfDef Performance measurement
-    if (sm.content.requester === this.id) {
-      this.requestReceived++;
-      if (this.requestReceived >= this.numberOfOps / 2) {
-        this.requestsReceivedTime.set(sm.sequence, window.performance.now());
-      }
-      // Last reply arrived
-      if (sm.sequence == this.numberOfOps - 1) {
-        console.log('compute Statistic');
-        this.computeStatistic();
-        this.editorProxy.invokeOrdered({operation: 'latency-measurement', data: this.averageLatencyAll}, this);
-      }
-    }
-    /// EndIfDef
 
     // Fix cursor position
     let cursorPosition = this.getCurrentCursorPosition('editor');
-    console.log(cursorPosition);
+    //console.log(cursorPosition);
     if (cursorPosition != -1)
       this.cursorPosition = cursorPosition;
 
@@ -143,7 +133,30 @@ export class Editor implements OnInit, ReplyListener {
     // Operation is one of: subscribe, unsubscribe, read, write
     switch (sm.content.operation) {
       case 'write':
-        console.log('Writing...');
+       // console.log('Writing...');
+
+        /// IfDef Performance measurement
+        if (sm.content.requester === this.id) {
+          this.requestReceived++;
+          this.sampleCount++;
+          this.requestsReceivedTime.set(sm.sequence, window.performance.now());
+          if (this.sampleCount % this.sampleRate === 0) {
+            console.log('compute Statistic');
+            this.averageLatencyAll = this.computeStatistic(this.sampleCount-this.sampleRate);
+            this.averageLatencyAll = isNaN(this.averageLatencyAll) ? -1.0 : this.averageLatencyAll;
+            this.editorProxy.invokeOrdered({operation:"latency-measurement", data: this.averageLatencyAll}, this);
+          }
+          /*
+          // Last reply arrived
+          if (sm.sequence == this.numberOfOps - 1) {
+            console.log('compute Statistic');
+            this.computeStatistic();
+            this.editorProxy.invokeOrdered({operation:"latency-measurement", data: this.averageLatencyAll}, this);
+          }
+          */
+        }
+        /// EndIfDef
+
 
         let diffs = sm.content.data;
 
@@ -163,7 +176,7 @@ export class Editor implements OnInit, ReplyListener {
         break;
       case 'read':
       case 'subscribe':
-        console.log('Reading...');
+       // console.log('Reading...');
         let document = buff.toString('utf8');
         this.editor.innerHTML = document;
         this.client_shadow = document;
@@ -357,11 +370,11 @@ export class Editor implements OnInit, ReplyListener {
           this.progress = this.requestSent / this.numberOfOps * 100;
 
         }
-        if (this.requestSent >= this.numberOfOps / 2) {
+
           if (this.measureLatency) {
              this.requestsSentTime.set(sequence, window.performance.now());
           }
-        }
+
       } else {
         this.requestSubscription.unsubscribe();
       }
@@ -369,12 +382,15 @@ export class Editor implements OnInit, ReplyListener {
 
   }
 
-  computeStatistic() {
+  computeStatistic(index: number) {
 
+    console.log('index ', index);
     let latencies: Map<number, number> = new Map();
     // Compute all latencies
     let k = 0;
-    for (let i = this.numberOfOps / 2; i < this.numberOfOps / 2 + this.requestsReceivedTime.size; i++) {
+    console.log(this.requestsReceivedTime);
+    console.log(this.requestsSentTime);
+    for (let i = index; i < index + this.sampleRate; i++) {
       if (this.requestsReceivedTime.get(i)) {
         // latency[request_i] = T_req_Received[i] - T_req_Sent[i]
         let latency = this.requestsReceivedTime.get(i) - this.requestsSentTime.get(i);
@@ -393,7 +409,10 @@ export class Editor implements OnInit, ReplyListener {
     this.averageLatencyAll = s / latencies.size;
     this.averageLatencyAll = Math.round(this.averageLatencyAll * 100) / 100;
 
+    console.log(this.averageLatencyAll);
+    return this.averageLatencyAll;
 
+/*
     // Compute max Latency
     let max = 0;
     for (let i = 0; i < latencies.size; i++) {
@@ -444,7 +463,8 @@ export class Editor implements OnInit, ReplyListener {
     this.standard_deviation = Math.sqrt(s / n);
     this.standard_deviation = Math.round(this.standard_deviation * 100) / 100;
 
-    this.statisticComputed = true;
+*/
+    //this.statisticComputed = true;
   }
 
 }

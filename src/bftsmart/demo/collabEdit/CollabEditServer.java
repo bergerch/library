@@ -9,10 +9,16 @@ import bftsmart.tom.server.Replier;
 import bftsmart.tom.server.defaultservices.DefaultRecoverable;
 
 import java.io.*;
+import java.lang.management.ManagementFactory;
+import java.nio.charset.Charset;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.LinkedList;
 
 import bftsmart.tom.util.Storage;
+import com.sun.management.OperatingSystemMXBean;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
@@ -22,9 +28,8 @@ import javax.management.Attribute;
 import javax.management.AttributeList;
 import javax.management.MBeanServer;
 import javax.management.ObjectName;
-import java.lang.management.ManagementFactory;
-import java.lang.management.OperatingSystemMXBean;
-import java.lang.management.ThreadMXBean;
+
+import java.util.List;
 
 public class CollabEditServer extends DefaultRecoverable implements Replier {
 
@@ -51,11 +56,12 @@ public class CollabEditServer extends DefaultRecoverable implements Replier {
     private long startTime = System.currentTimeMillis();
     private long currentTime = System.currentTimeMillis();
     private long appStartTime = System.currentTimeMillis();
-    private ThreadMXBean threadBean = ManagementFactory.getThreadMXBean();
-    private OperatingSystemMXBean opBean = ManagementFactory.getOperatingSystemMXBean();
+   // private ThreadMXBean threadBean = ManagementFactory.getThreadMXBean();
+   // private OperatingSystemMXBean opBean = ManagementFactory.getOperatingSystemMXBean();
     int ops;
     double client_latency = -1;
     HashMap<Integer, Integer> simultanWritingClients = new HashMap<>();
+    List<String> lines = new LinkedList<String>();
 
 
     public CollabEditServer(int id, boolean verbose) {
@@ -66,6 +72,9 @@ public class CollabEditServer extends DefaultRecoverable implements Replier {
         this.verbose = verbose;
         totalLatency = new Storage(interval);
         executeLatency = new Storage(interval);
+
+        String line = "AppTime,SysTime,Throughput,MAXThroughput,#ClientsWriting,#Patches,ClientLatency,CPULoad";
+        lines.add(line);
 
     }
 
@@ -107,10 +116,21 @@ public class CollabEditServer extends DefaultRecoverable implements Replier {
 
     private byte[] executeSingle(byte[] command, MessageContext msgCtx) {
 
-        /** BEGIN Performance measurement */
-
         iterations++;
         ops++;
+
+        /** BEGIN Performance measurement */
+
+        if (iterations % 1000 == 0) {
+            Path file = Paths.get("/home/bergerch/performance.txt");
+            try {
+                Files.write(file, lines, Charset.forName("UTF-8"));
+                System.out.println("File Written!");
+            } catch (Exception e) {
+                System.out.println("Could not wrtite file");
+            }
+        }
+
         // if (msgCtx != null && msgCtx.getFirstInBatch() != null) {
         // msgCtx.getFirstInBatch().executedTime = System.nanoTime();
         // totalLatency.store(msgCtx.getFirstInBatch().executedTime - msgCtx.getFirstInBatch().receptionTime);
@@ -125,25 +145,39 @@ public class CollabEditServer extends DefaultRecoverable implements Replier {
         currentTime = System.currentTimeMillis();
         if (currentTime > startTime + 1000) {
 
+            String line = "";
             System.out.println();
             System.out.println("--- Measurements at "+ (((float)((long)currentTime - appStartTime))/1000) + " s ");
+            line += currentTime - appStartTime;
+            line += ",";
             System.out.println("System Time = " + currentTime);
+            line += currentTime + ",";
             tp = (float)(ops*1000/(float)(currentTime-startTime));
+            line += tp + ",";
             int simWritingClients = simultanWritingClients.size();
             if (tp > maxTp) maxTp = tp;
+            line += maxTp+","+simWritingClients+",";
             System.out.println("# Clients writing = " + simWritingClients);
             System.out.println(ops + " Patches computed");
+            line += ops + ",";
             System.out.println("Throughput = " + tp +" operations/sec (Maximum observed: " + maxTp + " ops/sec)");
             System.out.println("Client latency: " + this.client_latency);
+            line+=this.client_latency+",";
+
+
             // System.out.println("Total latency = " + totalLatency.getAverage(false) / 1000 + " (+/- "+ (long)totalLatency.getDP(false) / 1000 +") us ");
             //float exeT = (float) executeLatency.getAverage(false);
             //System.out.println("Execute Time = "+ exeT);
 
             try {
-                System.out.println("CPU LOAD = " + (float) getProcessCpuLoad());
+                float cpuLoad = (float) getProcessCpuLoad();
+                System.out.println("CPU LOAD = " + cpuLoad);
+                line+=cpuLoad;
+
             } catch (Exception e) {
 
             }
+            lines.add(line);
             totalLatency.reset();
             executeLatency.reset();
             startTime = System.currentTimeMillis();
@@ -232,7 +266,13 @@ public class CollabEditServer extends DefaultRecoverable implements Replier {
                 break;
             case "latency-measurement":
                 // Client transmitted its latency measurement results
-                client_latency = (double) jsonObject.get("data");
+                try {
+                    client_latency = (double)  jsonObject.get("data");
+              }
+                catch (Exception e) {
+                    Long l =  (Long) jsonObject.get("data"); // Parse error
+                    client_latency = l.doubleValue();
+               }
                 break;
             default:
                 print(" INVALID Operation! See Server API");
@@ -406,7 +446,11 @@ public class CollabEditServer extends DefaultRecoverable implements Replier {
     }
 
     public static double getProcessCpuLoad() throws Exception {
+        OperatingSystemMXBean bean = (com.sun.management.OperatingSystemMXBean) ManagementFactory.getOperatingSystemMXBean();
+        return bean.getProcessCpuLoad()*100;
+    }
 
+        /*
         MBeanServer mbs    = ManagementFactory.getPlatformMBeanServer();
         ObjectName name    = ObjectName.getInstance("java.lang:type=OperatingSystem");
         AttributeList list = mbs.getAttributes(name, new String[]{ "ProcessCpuLoad" });
@@ -420,5 +464,5 @@ public class CollabEditServer extends DefaultRecoverable implements Replier {
         if (value == -1.0)      return Double.NaN;
         // returns a percentage value with 1 decimal point precision
         return ((int)(value * 1000) / 10.0);
-    }
+    } */
 }
