@@ -1,22 +1,13 @@
 package bftsmart.demo.collabEdit;
 
 import java.awt.*;
-import java.io.BufferedReader;
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
 import java.io.IOException;
-
-import java.io.InputStreamReader;
 
 import bftsmart.communication.client.ReplyListener;
 import bftsmart.tom.AsynchServiceProxy;
 import bftsmart.tom.RequestContext;
-import bftsmart.tom.ServiceProxy;
 import bftsmart.tom.core.messages.TOMMessage;
 import bftsmart.tom.core.messages.TOMMessageType;
-import bftsmart.tom.util.Logger;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
@@ -25,12 +16,12 @@ import org.json.simple.parser.ParseException;
 import javax.swing.*;
 import javax.swing.text.Document;
 import javax.swing.text.html.HTMLEditorKit;
+import java.util.HashMap;
 import java.util.LinkedList;
-import java.util.logging.Level;
+import java.util.Map;
 
 /**
  * Example client that writes on a document
- *
  */
 public class CollabEditClient implements ReplyListener {
 
@@ -41,10 +32,28 @@ public class CollabEditClient implements ReplyListener {
     // range;
     private boolean subscribed;
     private String local_change;
-    private  DiffMatchPatch dmp;
+    private DiffMatchPatch dmp;
     private JEditorPane jEditorPane;
 
     JSONParser parser = new JSONParser();
+
+    /**
+     * Performance measurement fields, only used for evaluation purpose
+     */
+    int numberOfOps = 100000; // How many operations each client executs e.g. the number of requests
+    int interval = 50; // Milliseconds a client waits before sending the next request
+    // boolean readOnly = false; // If client should send read-only requests instead of ordered requests
+    long lastTime = System.currentTimeMillis();
+    boolean measureLatency = false;
+    int requestSent = 0;
+    int requestReceived = 0;
+    Map<Integer, Long> requestsSentTime = new HashMap();
+    Map<Integer, Long> requestsReceivedTime = new HashMap();
+    double averageLatencyAll = -1;
+    int sampleRate = 10;
+    int sampleCount = 0;
+    int num = 0;
+
 
     public static void main(String[] args) throws IOException, InterruptedException {
         if (args.length < 1) {
@@ -62,15 +71,14 @@ public class CollabEditClient implements ReplyListener {
             }
         }
         System.out.println("Started");
-        new CollabEditClient(Integer.parseInt(args[0]), verbose,  ui);
+        new CollabEditClient(Integer.parseInt(args[0]), verbose, ui);
     }
 
     public CollabEditClient(int id, boolean verbose, boolean ui) {
 
         editorProxy = new AsynchServiceProxy(id);
 
-        if (ui)
-        {
+        if (ui) {
             // create jeditorpane
             jEditorPane = new JEditorPane();
 
@@ -97,7 +105,7 @@ public class CollabEditClient implements ReplyListener {
             j.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 
             // display the frame
-            j.setSize(new Dimension(600,600));
+            j.setSize(new Dimension(600, 600));
 
             // pack it, if you prefer
             //j.pack();
@@ -116,6 +124,98 @@ public class CollabEditClient implements ReplyListener {
                 TOMMessageType.ORDERED_REQUEST, "onDocChange");
     }
 
+    public void autoWritePerofrmanceMeasurement() {
+
+
+        String shakespeare = "FROM fairest creatures we desire increase," +
+                "That thereby beautys rose might never die, " +
+                "But as the riper should by time decease," +
+                "His tender heir might bear his memory: " +
+                "But thou, contracted to thine own bright eyes," +
+                "Feedst thy lightest flame with self-substantial fuel, " +
+                "Making a famine where abundance lies, " +
+                "Thyself thy foe, to thy sweet self too cruel. " +
+                "Thou that art now the worlds fresh ornament " +
+                "And only herald to the gaudy spring, " +
+                "Within thine own bud buriest thy content" +
+                "And, tender churl, makest waste in niggarding. " +
+                "Pity the world, or else this glutton be, " +
+                "To eat the worlds due, by the grave and thee.";
+
+        this.requestReceived = 0;
+        num++;
+
+        if (this.requestSent < this.numberOfOps) {
+            this.requestSent++;
+            int sequence = -1;
+            String currentDoc = this.document;
+            int randomPosition = (int) (Math.random() * currentDoc.length());
+            String operationType = Math.random() > 0.49 ? "INSERT" : "DELETE";
+            String pre, post;
+            switch (operationType) {
+                case "INSERT":
+                    pre = currentDoc.substring(0, randomPosition);
+                    String insertion = "" + shakespeare.charAt(num % shakespeare.length());
+                    post = currentDoc.substring(randomPosition);
+                    currentDoc = pre + insertion + post;
+                    break;
+                case "DELETE":
+                    pre = currentDoc.substring(0, randomPosition);
+                    post = currentDoc.substring(randomPosition + 1);
+                    currentDoc = pre + post;
+                    break;
+            }
+            this.document = currentDoc;
+            LinkedList<DiffMatchPatch.Diff> d = this.dmp.diff_main(this.client_shadow, this.document);
+            this.dmp.diff_cleanupSemantic(d);
+            this.client_shadow = this.document;
+            // Send write command to replica set
+            sequence = this.editorProxy.invokeAsynchRequest(diffsToBytes(d, editorProxy.getProcessId()), this, TOMMessageType.ORDERED_REQUEST);
+
+        }
+            /* TODO
+            if (this.requestSent % 100 == 0) {
+                let newTime = window.performance.now();
+                let diff = newTime - this.lastTime;
+                let time1Req = diff / 100;
+                let numReq = 1000 / time1Req;
+                this.opsPerSecond = Math.floor(numReq);
+                this.lastTime = window.performance.now();
+                this.progress = this.requestSent / this.numberOfOps * 100;
+            }
+            if (this.measureLatency) {
+                this.requestsSentTime.set(sequence, window.performance.now());
+            }
+
+        } else {
+            this.requestSubscription.unsubscribe();
+        }
+
+    */
+
+    }
+
+    private byte[] diffsToBytes(LinkedList<DiffMatchPatch.Diff> edits, int requester) {
+        String dataString = "[";
+        String issuer = "\"requester\":" + requester;
+        int k = 0;
+        for (DiffMatchPatch.Diff edit : edits) {
+            String a = "[";
+            a += DiffMatchPatch.Operation.toInt(edit.operation) + ",";
+            a += "\"" + edit.text + "\"";
+            a += "]";
+            dataString += a; //FIXME String Builder
+            if (k < edits.size() - 1) {
+                dataString += ",";
+            }
+            k++;
+        }
+        dataString += "]";
+        String command = "\"operation\":\"write\"";
+        String data = "\"data\":" + dataString;
+        String res = "{" + command + "," + data + "," + issuer + "}";
+        return res.getBytes();
+    }
 
     private void testServerAPI() {
         byte[] response;

@@ -62,6 +62,9 @@ public class CollabEditServer extends DefaultRecoverable implements Replier {
     double client_latency = -1;
     HashMap<Integer, Integer> simultanWritingClients = new HashMap<>();
     List<String> lines = new LinkedList<String>();
+    private long saveStatsTime = System.currentTimeMillis();
+    long measureInterval = 1000; // 1 second
+    long saveInterval = 30000; // 30 s
 
 
     public CollabEditServer(int id, boolean verbose) {
@@ -73,7 +76,7 @@ public class CollabEditServer extends DefaultRecoverable implements Replier {
         totalLatency = new Storage(interval);
         executeLatency = new Storage(interval);
 
-        String line = "AppTime,SysTime,Throughput,MAXThroughput,#ClientsWriting,#Patches,ClientLatency,CPULoad";
+        String line = "AppTime,SysTime,Throughput,MAXThroughput,#ClientsWriting,#Patches,ClientLatency,DocLength,CPULoad";
         lines.add(line);
 
     }
@@ -121,16 +124,6 @@ public class CollabEditServer extends DefaultRecoverable implements Replier {
 
         /** BEGIN Performance measurement */
 
-        if (iterations % 1000 == 0) {
-            Path file = Paths.get("/home/bergerch/performance.txt");
-            try {
-                Files.write(file, lines, Charset.forName("UTF-8"));
-                System.out.println("File Written!");
-            } catch (Exception e) {
-                System.out.println("Could not wrtite file");
-            }
-        }
-
         // if (msgCtx != null && msgCtx.getFirstInBatch() != null) {
         // msgCtx.getFirstInBatch().executedTime = System.nanoTime();
         // totalLatency.store(msgCtx.getFirstInBatch().executedTime - msgCtx.getFirstInBatch().receptionTime);
@@ -143,7 +136,7 @@ public class CollabEditServer extends DefaultRecoverable implements Replier {
         }
 
         currentTime = System.currentTimeMillis();
-        if (currentTime > startTime + 1000) {
+        if (currentTime > startTime + measureInterval) {
 
             String line = "";
             System.out.println();
@@ -163,6 +156,7 @@ public class CollabEditServer extends DefaultRecoverable implements Replier {
             System.out.println("Throughput = " + tp +" operations/sec (Maximum observed: " + maxTp + " ops/sec)");
             System.out.println("Client latency: " + this.client_latency);
             line+=this.client_latency+",";
+            line+=this.document.length()+",";
 
 
             // System.out.println("Total latency = " + totalLatency.getAverage(false) / 1000 + " (+/- "+ (long)totalLatency.getDP(false) / 1000 +") us ");
@@ -183,6 +177,17 @@ public class CollabEditServer extends DefaultRecoverable implements Replier {
             startTime = System.currentTimeMillis();
             ops = 0;
             simultanWritingClients.clear();
+
+            if (currentTime > saveStatsTime + saveInterval) {
+                Path file = Paths.get("/home/bergerch/performance.csv");
+                try {
+                    Files.write(file, lines, Charset.forName("UTF-8"));
+                    System.out.println("File Written!");
+                } catch (Exception e) {
+                    System.out.println("Could not wrtite file");
+                }
+                saveStatsTime = currentTime;
+            }
         }
 
 

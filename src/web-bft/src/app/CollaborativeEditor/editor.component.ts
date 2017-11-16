@@ -29,7 +29,7 @@ export class Editor implements OnInit, ReplyListener {
   id;
 
   /** Performance measurement fields, only used for evaluation purpose */
-  numberOfOps: number = 1010; // How many operations each client executs e.g. the number of requests
+  numberOfOps: number = 10010; // How many operations each client executs e.g. the number of requests
   interval: number = 50; // Milliseconds a client waits before sending the next request
   readOnly: boolean = false; // If client should send read-only requests instead of ordered requests
   progress: number = 0; // For progress bar
@@ -351,7 +351,23 @@ export class Editor implements OnInit, ReplyListener {
         if (this.readOnly) {
           sequence = this.editorProxy.invokeUnordered({operation: 'read'}, this);
         } else {
-          this.editor.innerHTML = this.editor.innerHTML + shakespeare.charAt(num % shakespeare.length);
+
+          let currentDoc = this.editor.innerHTML;
+          let randomPosition = Math.floor(Math.random() * currentDoc.length);
+          let operationType = Math.random() > 0.49 ? 'INSERT' : 'DELETE';
+
+          if (operationType === 'INSERT') {
+            let pre = currentDoc.slice(0, randomPosition);
+            let insertion = shakespeare.charAt(num % shakespeare.length);
+            let post = currentDoc.slice(randomPosition);
+            currentDoc = pre + insertion + post;
+          }
+          if (operationType === 'DELETE') {
+            let pre = currentDoc.slice(0, randomPosition);
+            let post = currentDoc.slice(randomPosition+1);
+            currentDoc = pre + post;
+          }
+          this.editor.innerHTML = currentDoc;
           let d = this.dmp.diff_main(this.client_shadow, this.editor.innerHTML);
           this.dmp.diff_cleanupSemantic(d);
           this.client_shadow = this.editor.innerHTML;
