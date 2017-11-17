@@ -31,8 +31,8 @@ public class CollabEditServer extends DefaultRecoverable implements Replier {
     private ReplicaContext rc;
     ServiceReplica replica = null;
 
-    private String document = "Hello World!";
-    private String server_shadow = "Hello World!";
+    private String document = "Hello World! This is a test for collaborative editing";
+    private String server_shadow = document;
 
     int[] subscribers = new int[50];
     int subscriptionCount = 0;

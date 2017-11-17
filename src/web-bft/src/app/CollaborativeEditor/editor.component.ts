@@ -55,7 +55,6 @@ export class Editor implements OnInit, ReplyListener {
   sampleCount: number = 0;
 
 
-
   constructor(private editorProxy: ServiceProxy,  router: Router) {
     this.id = this.editorProxy.getId();
     let url = router.url.toString();
