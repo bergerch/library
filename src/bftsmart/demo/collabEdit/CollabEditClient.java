@@ -126,7 +126,6 @@ public class CollabEditClient implements ReplyListener {
 
     public void autoWritePerofrmanceMeasurement() {
 
-
         String shakespeare = "FROM fairest creatures we desire increase," +
                 "That thereby beautys rose might never die, " +
                 "But as the riper should by time decease," +
@@ -144,10 +143,9 @@ public class CollabEditClient implements ReplyListener {
 
         this.requestReceived = 0;
         num++;
-
+        int sequence = -1;
         if (this.requestSent < this.numberOfOps) {
             this.requestSent++;
-            int sequence = -1;
             String currentDoc = this.document;
             int randomPosition = (int) (Math.random() * currentDoc.length());
             String operationType = Math.random() > 0.49 ? "INSERT" : "DELETE";
@@ -170,52 +168,27 @@ public class CollabEditClient implements ReplyListener {
             this.dmp.diff_cleanupSemantic(d);
             this.client_shadow = this.document;
             // Send write command to replica set
-            sequence = this.editorProxy.invokeAsynchRequest(diffsToBytes(d, editorProxy.getProcessId()), this, TOMMessageType.ORDERED_REQUEST);
+            sequence = this.editorProxy.invokeAsynchRequest(CollaborativeUtils.diffsToBytes(d, editorProxy.getProcessId()),
+                    this, TOMMessageType.ORDERED_REQUEST);
 
         }
-            /* TODO
-            if (this.requestSent % 100 == 0) {
-                let newTime = window.performance.now();
-                let diff = newTime - this.lastTime;
-                let time1Req = diff / 100;
-                let numReq = 1000 / time1Req;
-                this.opsPerSecond = Math.floor(numReq);
-                this.lastTime = window.performance.now();
-                this.progress = this.requestSent / this.numberOfOps * 100;
-            }
-            if (this.measureLatency) {
-                this.requestsSentTime.set(sequence, window.performance.now());
-            }
-
-        } else {
-            this.requestSubscription.unsubscribe();
+        /*
+        if (this.requestSent % 100 == 0) {
+            long newTime = System.currentTimeMillis();
+            long timeDiff = newTime - this.lastTime;
+            long time1Req = timeDiff / 100;
+            double numReq = ((double) 1000) / time1Req;
+            // this.opsPerSecond = Math.floor(numReq);
+            this.lastTime = System.currentTimeMillis();
+           // this.progress = this.requestSent / this.numberOfOps * 100;
         }
-
-    */
+        */
+        if (this.measureLatency) {
+            this.requestsSentTime.put(sequence, System.currentTimeMillis());
+        }
 
     }
 
-    private byte[] diffsToBytes(LinkedList<DiffMatchPatch.Diff> edits, int requester) {
-        String dataString = "[";
-        String issuer = "\"requester\":" + requester;
-        int k = 0;
-        for (DiffMatchPatch.Diff edit : edits) {
-            String a = "[";
-            a += DiffMatchPatch.Operation.toInt(edit.operation) + ",";
-            a += "\"" + edit.text + "\"";
-            a += "]";
-            dataString += a; //FIXME String Builder
-            if (k < edits.size() - 1) {
-                dataString += ",";
-            }
-            k++;
-        }
-        dataString += "]";
-        String command = "\"operation\":\"write\"";
-        String data = "\"data\":" + dataString;
-        String res = "{" + command + "," + data + "," + issuer + "}";
-        return res.getBytes();
-    }
 
     private void testServerAPI() {
         byte[] response;
@@ -267,16 +240,9 @@ public class CollabEditClient implements ReplyListener {
             case "write":
                 System.out.println("Write");
                 // Differential Synchronisation algorithm starts here
-                LinkedList<DiffMatchPatch.Diff> diffs = new LinkedList<>();
                 JSONArray data = (JSONArray) jsonObject.get("data");
                 // Parse Diff
-                for (Object a : data) {
-                    long method = (long) ((JSONArray) a).get(0);
-                    String text = ((String) ((JSONArray) a).get(1));
-                    DiffMatchPatch.Operation op = DiffMatchPatch.Operation.fromInt((int) method);
-                    DiffMatchPatch.Diff diff = new DiffMatchPatch.Diff(op, text);
-                    diffs.add(diff);
-                }
+                LinkedList<DiffMatchPatch.Diff> diffs = CollaborativeUtils.parseJSONArray(data);
                 LinkedList<DiffMatchPatch.Patch> patch;
                 // Create Patch
                 try {

@@ -24,11 +24,6 @@ import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
 
-import javax.management.Attribute;
-import javax.management.AttributeList;
-import javax.management.MBeanServer;
-import javax.management.ObjectName;
-
 import java.util.List;
 
 public class CollabEditServer extends DefaultRecoverable implements Replier {
@@ -56,8 +51,8 @@ public class CollabEditServer extends DefaultRecoverable implements Replier {
     private long startTime = System.currentTimeMillis();
     private long currentTime = System.currentTimeMillis();
     private long appStartTime = System.currentTimeMillis();
-   // private ThreadMXBean threadBean = ManagementFactory.getThreadMXBean();
-   // private OperatingSystemMXBean opBean = ManagementFactory.getOperatingSystemMXBean();
+    // private ThreadMXBean threadBean = ManagementFactory.getThreadMXBean();
+    // private OperatingSystemMXBean opBean = ManagementFactory.getOperatingSystemMXBean();
     int ops;
     double client_latency = -1;
     HashMap<Integer, Integer> simultanWritingClients = new HashMap<>();
@@ -131,8 +126,8 @@ public class CollabEditServer extends DefaultRecoverable implements Replier {
         float tp = -1;
 
         Integer i = msgCtx.getSender();
-        if(!simultanWritingClients.containsKey(i)) {
-            simultanWritingClients.put(i,i);
+        if (!simultanWritingClients.containsKey(i)) {
+            simultanWritingClients.put(i, i);
         }
 
         currentTime = System.currentTimeMillis();
@@ -140,24 +135,23 @@ public class CollabEditServer extends DefaultRecoverable implements Replier {
 
             String line = "";
             System.out.println();
-            System.out.println("--- Measurements at "+ (((float)((long)currentTime - appStartTime))/1000) + " s ");
+            System.out.println("--- Measurements at " + (((float) ((long) currentTime - appStartTime)) / 1000) + " s ");
             line += currentTime - appStartTime;
             line += ",";
             System.out.println("System Time = " + currentTime);
             line += currentTime + ",";
-            tp = (float)(ops*1000/(float)(currentTime-startTime));
+            tp = (float) (ops * 1000 / (float) (currentTime - startTime));
             line += tp + ",";
             int simWritingClients = simultanWritingClients.size();
             if (tp > maxTp) maxTp = tp;
-            line += maxTp+","+simWritingClients+",";
+            line += maxTp + "," + simWritingClients + ",";
             System.out.println("# Clients writing = " + simWritingClients);
             System.out.println(ops + " Patches computed");
             line += ops + ",";
-            System.out.println("Throughput = " + tp +" operations/sec (Maximum observed: " + maxTp + " ops/sec)");
+            System.out.println("Throughput = " + tp + " operations/sec (Maximum observed: " + maxTp + " ops/sec)");
             System.out.println("Client latency: " + this.client_latency);
-            line+=this.client_latency+",";
-            line+=this.document.length()+",";
-
+            line += this.client_latency + ",";
+            line += this.document.length() + ",";
 
             // System.out.println("Total latency = " + totalLatency.getAverage(false) / 1000 + " (+/- "+ (long)totalLatency.getDP(false) / 1000 +") us ");
             //float exeT = (float) executeLatency.getAverage(false);
@@ -166,7 +160,7 @@ public class CollabEditServer extends DefaultRecoverable implements Replier {
             try {
                 float cpuLoad = (float) getProcessCpuLoad();
                 System.out.println("CPU LOAD = " + cpuLoad);
-                line+=cpuLoad;
+                line += cpuLoad;
 
             } catch (Exception e) {
 
@@ -189,12 +183,9 @@ public class CollabEditServer extends DefaultRecoverable implements Replier {
                 saveStatsTime = currentTime;
             }
         }
-
-
         /** END Performance measurement */
 
         /** BEGIN Application logic  */
-
         JSONObject jsonObject = new JSONObject();
         String operation = "";
         String event = "";
@@ -226,19 +217,11 @@ public class CollabEditServer extends DefaultRecoverable implements Replier {
             case "write":
                 print(" Writing...");
                 // Differential Synchronisation algorithm starts here
-                LinkedList<DiffMatchPatch.Diff> diffs = new LinkedList<>();
                 JSONArray data = (JSONArray) jsonObject.get("data");
                 // Parse Diff
-                for (Object a : data) {
-                    long method = (long) ((JSONArray) a).get(0);
-                    String text = ((String) ((JSONArray) a).get(1));
-                    DiffMatchPatch.Operation op = DiffMatchPatch.Operation.fromInt((int) method);
-                    DiffMatchPatch.Diff diff = new DiffMatchPatch.Diff(op, text);
-                    diffs.add(diff);
-                }
-
-                LinkedList<DiffMatchPatch.Patch> patch;
+                LinkedList<DiffMatchPatch.Diff> diffs = CollaborativeUtils.parseJSONArray(data);
                 // Create Patch
+                LinkedList<DiffMatchPatch.Patch> patch;
                 try {
                     patch = dmp.patch_make(this.document, diffs);
                 } catch (Exception e) {
@@ -248,21 +231,17 @@ public class CollabEditServer extends DefaultRecoverable implements Replier {
                     //executeLatency.store(appEndtTime-appStartTime);
                     return documentToByte(requester);
                 }
-
                 print("----Applying Patch----");
                 print(patch.toString());
-
                 // Apply Patch
                 this.document = (String) dmp.patch_apply(patch, this.document)[0];
                 print("----Patch applied!---");
-
                 // Create Diffs, document_shadow <- updated_document
                 edits = dmp.diff_main(this.server_shadow, this.document);
                 dmp.diff_cleanupSemantic(edits);
                 this.document.replaceAll("\"", "");
                 this.server_shadow = this.document;
                 print("Document changed to: " + document);
-
                 // Distribute changes to all subscribed clients
                 break;
             case "read":
@@ -272,12 +251,11 @@ public class CollabEditServer extends DefaultRecoverable implements Replier {
             case "latency-measurement":
                 // Client transmitted its latency measurement results
                 try {
-                    client_latency = (double)  jsonObject.get("data");
-              }
-                catch (Exception e) {
-                    Long l =  (Long) jsonObject.get("data"); // Parse error
+                    client_latency = (double) jsonObject.get("data");
+                } catch (Exception e) {
+                    Long l = (Long) jsonObject.get("data"); // Parse error
                     client_latency = l.doubleValue();
-               }
+                }
                 break;
             default:
                 print(" INVALID Operation! See Server API");
@@ -286,8 +264,7 @@ public class CollabEditServer extends DefaultRecoverable implements Replier {
         /** END Application logic  */
         //long appEndtTime = System.currentTimeMillis();
         //executeLatency.store(appEndtTime-appStartTime);
-
-        return operation.equals("write") ? diffsToBytes(edits, requester) : documentToByte(requester);
+        return operation.equals("write") ? CollaborativeUtils.diffsToBytes(edits, requester) : documentToByte(requester);
     }
 
     @SuppressWarnings("unchecked")
@@ -329,33 +306,11 @@ public class CollabEditServer extends DefaultRecoverable implements Replier {
         }
     }
 
-    private byte[] diffsToBytes(LinkedList<DiffMatchPatch.Diff> edits, int requester) {
-        String dataString = "[";
-        String issuer =  "\"requester\":"+ requester;
-        int k = 0;
-        for (DiffMatchPatch.Diff edit : edits) {
-            String a = "[";
-            a+=DiffMatchPatch.Operation.toInt(edit.operation)+ ",";
-            a+="\""+ edit.text + "\"";
-            a+= "]";
-            dataString+=a; //FIXME String Builder
-            if (k < edits.size()-1) {
-                dataString+=",";
-            }
-            k++;
-        }
-        dataString+="]";
-        String command = "\"operation\":\"write\"";
-        String data =  "\"data\":"+ dataString;
-        String res = "{"+command+","+data+","+ issuer+"}";
-        return res.getBytes();
-    }
-
     private byte[] documentToByte(int requester) {
         String command = "\"operation\":\"read\"";
-        String data =  "\"data\":\""+ this.document+"\"";
-        String issuer =  "\"requester\":"+ requester;
-        String res = "{"+command+","+data+","+ issuer+"}";
+        String data = "\"data\":\"" + this.document + "\"";
+        String issuer = "\"requester\":" + requester;
+        String res = "{" + command + "," + data + "," + issuer + "}";
         try {
             return res.getBytes("UTF-8");
         } catch (UnsupportedEncodingException e) {
@@ -383,7 +338,6 @@ public class CollabEditServer extends DefaultRecoverable implements Replier {
             print("Group-Send back");
             rc.getServerCommunicationSystem().send(subscribers, request.reply);
         }
-
         print();
         print("__________________________________________");
         print();
@@ -441,33 +395,18 @@ public class CollabEditServer extends DefaultRecoverable implements Replier {
 
 
     void print() {
-        if(verbose)
+        if (verbose)
             System.out.println();
     }
 
     void print(String s) {
-        if(verbose)
+        if (verbose)
             System.out.println(s);
     }
 
     public static double getProcessCpuLoad() throws Exception {
         OperatingSystemMXBean bean = (com.sun.management.OperatingSystemMXBean) ManagementFactory.getOperatingSystemMXBean();
-        return bean.getProcessCpuLoad()*100;
+        return bean.getProcessCpuLoad() * 100;
     }
 
-        /*
-        MBeanServer mbs    = ManagementFactory.getPlatformMBeanServer();
-        ObjectName name    = ObjectName.getInstance("java.lang:type=OperatingSystem");
-        AttributeList list = mbs.getAttributes(name, new String[]{ "ProcessCpuLoad" });
-
-        if (list.isEmpty())     return Double.NaN;
-
-        Attribute att = (Attribute)list.get(0);
-        Double value  = (Double)att.getValue();
-
-        // usually takes a couple of seconds before we get real values
-        if (value == -1.0)      return Double.NaN;
-        // returns a percentage value with 1 decimal point precision
-        return ((int)(value * 1000) / 10.0);
-    } */
 }
