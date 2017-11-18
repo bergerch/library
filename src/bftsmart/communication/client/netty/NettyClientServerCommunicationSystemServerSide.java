@@ -323,8 +323,6 @@ public class NettyClientServerCommunicationSystemServerSide extends SimpleChanne
 			k++;
 		}
 
-		System.out.println("TARGETS: "+ Arrays.toString(targets));
-
 		//serialize
 		// message
 		DataOutputStream dos = null;
@@ -359,7 +357,6 @@ public class NettyClientServerCommunicationSystemServerSide extends SimpleChanne
 
 		TOMMessage[] messages = new TOMMessage[targets.length];
 		for (int i = 0; i < targets.length; i++) {
-			System.out.println("Sending to " + targets[i]);
 			rl.readLock().lock();
 			//sendLock.lock();
 			try {

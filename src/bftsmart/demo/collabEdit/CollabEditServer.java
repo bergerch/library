@@ -53,7 +53,7 @@ public class CollabEditServer extends DefaultRecoverable implements Replier {
     private long appStartTime = System.currentTimeMillis();
     // private ThreadMXBean threadBean = ManagementFactory.getThreadMXBean();
     // private OperatingSystemMXBean opBean = ManagementFactory.getOperatingSystemMXBean();
-    int ops;
+    int patchesCount;
     double client_latency = -1;
     HashMap<Integer, Integer> simultanWritingClients = new HashMap<>();
     List<String> lines = new LinkedList<String>();
@@ -115,7 +115,6 @@ public class CollabEditServer extends DefaultRecoverable implements Replier {
     private byte[] executeSingle(byte[] command, MessageContext msgCtx) {
 
         iterations++;
-        ops++;
 
         /** BEGIN Performance measurement */
 
@@ -140,15 +139,15 @@ public class CollabEditServer extends DefaultRecoverable implements Replier {
             line += ",";
             System.out.println("System Time = " + currentTime);
             line += currentTime + ",";
-            tp = (float) (ops * 1000 / (float) (currentTime - startTime));
+            tp = (float) (patchesCount * 1000 / (float) (currentTime - startTime));
             line += tp + ",";
             int simWritingClients = simultanWritingClients.size();
             if (tp > maxTp) maxTp = tp;
             line += maxTp + "," + simWritingClients + ",";
             System.out.println("# Clients writing = " + simWritingClients);
-            System.out.println(ops + " Patches computed");
-            line += ops + ",";
-            System.out.println("Throughput = " + tp + " operations/sec (Maximum observed: " + maxTp + " ops/sec)");
+            System.out.println(patchesCount + " Patches computed");
+            line += patchesCount + ",";
+            System.out.println("Throughput = " + tp + " operations/sec (Maximum observed: " + maxTp + " patchesCount/sec)");
             System.out.println("Client latency: " + this.client_latency);
             line += this.client_latency + ",";
             line += this.document.length() + ",";
@@ -169,7 +168,7 @@ public class CollabEditServer extends DefaultRecoverable implements Replier {
             totalLatency.reset();
             executeLatency.reset();
             startTime = System.currentTimeMillis();
-            ops = 0;
+            patchesCount = 0;
             simultanWritingClients.clear();
 
             if (currentTime > saveStatsTime + saveInterval) {
@@ -222,6 +221,7 @@ public class CollabEditServer extends DefaultRecoverable implements Replier {
                 LinkedList<DiffMatchPatch.Diff> diffs = CollaborativeUtils.parseJSONArray(data);
                 // Create Patch
                 LinkedList<DiffMatchPatch.Patch> patch;
+                patchesCount++;
                 try {
                     patch = dmp.patch_make(this.document, diffs);
                 } catch (Exception e) {

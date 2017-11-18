@@ -4,7 +4,6 @@ import java.awt.*;
 import java.io.IOException;
 
 import bftsmart.communication.client.ReplyListener;
-import bftsmart.demo.microbenchmarks.ThroughputLatencyClient;
 import bftsmart.tom.AsynchServiceProxy;
 import bftsmart.tom.RequestContext;
 import bftsmart.tom.core.messages.TOMMessage;
@@ -17,16 +16,9 @@ import org.json.simple.parser.ParseException;
 import javax.swing.*;
 import javax.swing.text.Document;
 import javax.swing.text.html.HTMLEditorKit;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.Map;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 
 /**
@@ -50,9 +42,9 @@ class CollabEditClient implements ReplyListener {
      * Performance measurement fields, only used for evaluation purpose
      */
     int numberOfOps = 1000000; // How many operations each client executs e.g. the number of requests
-    int interval = 2000; // Milliseconds a client waits before sending the next request
+    int interval = 50; // Milliseconds a client waits before sending the next request
     // boolean readOnly = false; // If client should send read-only requests instead of ordered requests
-    long lastTime = System.currentTimeMillis();
+    long lastTime = System.nanoTime();
     boolean measureLatency = false;
     int requestSent = 0;
     int requestReceived = 0;
@@ -142,7 +134,7 @@ class CollabEditClient implements ReplyListener {
                 TOMMessageType.ORDERED_REQUEST, "onDocChange");
 
         try {
-            Thread.sleep(5000);
+            Thread.sleep(2000);
             autoWritePerofrmanceMeasurement();
         } catch (Exception e) {
 
@@ -192,31 +184,21 @@ class CollabEditClient implements ReplyListener {
                         break;
                 }
                 this.document = currentDoc;
+                if(ui)
+                    this.jEditorPane.setText(document);
                 LinkedList<DiffMatchPatch.Diff> d = this.dmp.diff_main(this.client_shadow, this.document);
                 this.dmp.diff_cleanupSemantic(d);
                 this.client_shadow = this.document;
                 // Send write command to replica set
                 sequence = this.editorProxy.invokeAsynchRequest(CollaborativeUtils.diffsToBytes(d, editorProxy.getProcessId()),
                         this, TOMMessageType.ORDERED_REQUEST);
-
+                if (this.measureLatency) {
+                    this.requestsSentTime.put(sequence, System.nanoTime());
+                }
             }
 
             if (this.requestSent % 100 == 0) {
-
                 System.out.println(num);
-               /*
-            long newTime = System.currentTimeMillis();
-            long timeDiff = newTime - this.lastTime;
-            long time1Req = timeDiff / 100;
-            double numReq = ((double) 1000) / time1Req;
-            // this.opsPerSecond = Math.floor(numReq);
-            this.lastTime = System.currentTimeMillis();
-           // this.progress = this.requestSent / this.numberOfOps * 100;
-           */
-            }
-
-            if (this.measureLatency) {
-                this.requestsSentTime.put(sequence, System.currentTimeMillis());
             }
 
             Thread.sleep(interval);
@@ -248,8 +230,6 @@ class CollabEditClient implements ReplyListener {
     @Override
     public void replyReceived(RequestContext context, TOMMessage reply) {
 
-        System.out.println("Received TOMMessage");
-
         JSONObject jsonObject = new JSONObject();
         String operation = "";
         String event = "";
@@ -266,6 +246,7 @@ class CollabEditClient implements ReplyListener {
         }
 
         switch (operation) {
+            case "subscribe":
             case "read":
                 this.document = (String) jsonObject.get("data");
                 this.client_shadow = this.document;
@@ -278,7 +259,7 @@ class CollabEditClient implements ReplyListener {
                 if (requester == editorProxy.getProcessId()) {
                     this.requestReceived++;
                     this.sampleCount++;
-                    this.requestsReceivedTime.put(reply.getSequence(), System.currentTimeMillis());
+                    this.requestsReceivedTime.put(reply.getSequence(), System.nanoTime());
                     if (this.measureLatency && this.sampleCount % this.sampleRate == 0) {
                         this.averageLatencyAll = this.computeStatistic(this.sampleCount - this.sampleRate);
                         // {operation:"latency-measurement", data: this.averageLatencyAll}
@@ -289,20 +270,30 @@ class CollabEditClient implements ReplyListener {
 
                 // Differential Synchronisation algorithm starts here
                 JSONArray data = (JSONArray) jsonObject.get("data");
+
                 // Parse Diff
                 LinkedList<DiffMatchPatch.Diff> diffs = CollaborativeUtils.parseJSONArray(data);
-                LinkedList<DiffMatchPatch.Patch> patch;
+
+                LinkedList<DiffMatchPatch.Patch> patch_changed;
+                LinkedList<DiffMatchPatch.Patch> patch_document;
+                LinkedList<DiffMatchPatch.Patch> patch_shadow;
                 // Create Patch
                 try {
-                    patch = dmp.patch_make(this.document, diffs);
+                    patch_changed  = dmp.patch_make(local_change, diffs);
+                    patch_document = dmp.patch_make(document, diffs);
+                    patch_shadow =  dmp.patch_make(client_shadow, diffs);
+
+                    local_change = (String) dmp.patch_apply(patch_changed, local_change)[0];
+
+                    if (! this.local_change.equals(client_shadow)) {
+                        // Apply Patch to document
+                        client_shadow = (String) dmp.patch_apply(patch_shadow, client_shadow)[0];
+                        document = (String) dmp.patch_apply(patch_document, document)[0];
+                    }
                 } catch (Exception e) {
-                    // Changes could not be applied, notify client about this
-                    //long appEndtTime = System.currentTimeMillis();
-                    //executeLatency.store(appEndtTime-appStartTime);
+                    // Changes could not be applied...
                     break;
                 }
-                this.document = (String) dmp.patch_apply(patch, this.document)[0];
-                this.client_shadow = this.document;
                 if (ui)
                     this.jEditorPane.setText(document);
                 break;
@@ -328,8 +319,8 @@ class CollabEditClient implements ReplyListener {
         for (int i = 0; i < latencies.size(); i++) {
             s += latencies.get(i);
         }
-        this.averageLatencyAll = s / latencies.size();
-        this.averageLatencyAll = Math.round(this.averageLatencyAll * 100) / 100;
+        this.averageLatencyAll = (s / latencies.size()) / 1000;
+
         return this.averageLatencyAll;
     }
 
