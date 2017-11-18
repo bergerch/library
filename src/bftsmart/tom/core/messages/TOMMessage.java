@@ -397,6 +397,18 @@ public class TOMMessage extends SystemMessage implements Externalizable, Compara
         return super.clone();
     }
 
+    public static TOMMessage deepCopy(TOMMessage m) {
+        TOMMessage res = new TOMMessage(m.sender, m.session, m.sequence, m.operationId, m.content.clone(), m.viewID, m.type, m.event);
+        res.destination = m.destination;
+        res.serializedMessage = m.serializedMessage.clone();
+        res.serializedMessageSignature = m.serializedMessageSignature;
+        res.reply = m.reply;
+        res.signed = m.signed;
+        res.seed = m.seed;
+        res.view_change_response = m.view_change_response;
+        return res;
+    }
+
 
     public String getEvent() {
         return event;

@@ -50,7 +50,7 @@ class CollabEditClient implements ReplyListener {
      * Performance measurement fields, only used for evaluation purpose
      */
     int numberOfOps = 1000000; // How many operations each client executs e.g. the number of requests
-    int interval = 50; // Milliseconds a client waits before sending the next request
+    int interval = 2000; // Milliseconds a client waits before sending the next request
     // boolean readOnly = false; // If client should send read-only requests instead of ordered requests
     long lastTime = System.currentTimeMillis();
     boolean measureLatency = false;

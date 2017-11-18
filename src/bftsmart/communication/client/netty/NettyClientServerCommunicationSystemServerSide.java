@@ -38,11 +38,8 @@ import java.net.ConnectException;
 import java.net.InetSocketAddress;
 import java.nio.channels.ClosedChannelException;
 import java.security.NoSuchAlgorithmException;
-import java.util.HashMap;
-import java.util.Iterator;
+import java.util.*;
 import java.util.Map.Entry;
-import java.util.Set;
-import java.util.ArrayList;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.logging.Level;
 
@@ -326,6 +323,8 @@ public class NettyClientServerCommunicationSystemServerSide extends SimpleChanne
 			k++;
 		}
 
+		System.out.println("TARGETS: "+ Arrays.toString(targets));
+
 		//serialize
 		// message
 		DataOutputStream dos = null;
@@ -358,7 +357,9 @@ public class NettyClientServerCommunicationSystemServerSide extends SimpleChanne
 			sm.serializedMessageSignature = data2;
 		}
 
+		TOMMessage[] messages = new TOMMessage[targets.length];
 		for (int i = 0; i < targets.length; i++) {
+			System.out.println("Sending to " + targets[i]);
 			rl.readLock().lock();
 			//sendLock.lock();
 			try {
@@ -366,8 +367,9 @@ public class NettyClientServerCommunicationSystemServerSide extends SimpleChanne
 				if (ncss != null) {
 					Channel session = ncss.getChannel();
 					sm.destination = targets[i];
+					messages[i] = TOMMessage.deepCopy(sm);
 					//send message
-					session.writeAndFlush(sm); // This used to invoke "await". Removed to avoid blockage and race condition.
+					session.writeAndFlush(messages[i]); // This used to invoke "await". Removed to avoid blockage and race condition.
 
                                 ///////TODO: replace this patch for a proper client preamble
                                 } else if (sm.getSequence() >= 0 && sm.getSequence() <= 5) {
