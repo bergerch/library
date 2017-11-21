@@ -29,7 +29,7 @@ export class Editor implements OnInit, ReplyListener {
   id;
 
   /** Performance measurement fields, only used for evaluation purpose */
-  numberOfOps: number = 10010; // How many operations each client executs e.g. the number of requests
+  numberOfOps: number = 200000; // How many operations each client executs e.g. the number of requests
   interval: number = 50; // Milliseconds a client waits before sending the next request
   readOnly: boolean = false; // If client should send read-only requests instead of ordered requests
   progress: number = 0; // For progress bar
@@ -53,6 +53,7 @@ export class Editor implements OnInit, ReplyListener {
   statisticComputed: boolean = false;
   sampleRate: number = 10;
   sampleCount: number = 0;
+  startedAutoWrite = false;
 
 
   constructor(private editorProxy: ServiceProxy,  router: Router) {
@@ -104,7 +105,7 @@ export class Editor implements OnInit, ReplyListener {
   }
 
   joinDocument() {
-    this.editorObservable = Observable.interval(300);
+    this.editorObservable = Observable.interval(200);
     this.editorSubscription = this.editorObservable.subscribe((num) => {
       if (!this.subscribed) {
         // Subscribe to document changes
@@ -113,6 +114,11 @@ export class Editor implements OnInit, ReplyListener {
         // Read initial document state
         this.editorProxy.invokeUnordered({operation: 'read'}, this);
         this.subscribed = true;
+      } else {
+        if (!this.startedAutoWrite && num > 10) {
+          this.autoWritePerformanceMeasurement();
+          this.startedAutoWrite = true;
+        }
       }
     });
   }
@@ -139,8 +145,8 @@ export class Editor implements OnInit, ReplyListener {
           this.requestReceived++;
           this.sampleCount++;
           this.requestsReceivedTime.set(sm.sequence, window.performance.now());
-          if (this.sampleCount % this.sampleRate === 0) {
-            console.log('compute Statistic');
+          if (this.sampleCount % this.sampleRate === 0 && this.measureLatency) {
+            // console.log('compute Statistic');
             this.averageLatencyAll = this.computeStatistic(this.sampleCount-this.sampleRate);
             this.averageLatencyAll = isNaN(this.averageLatencyAll) ? -1.0 : this.averageLatencyAll;
             this.editorProxy.invokeOrdered({operation:"latency-measurement", data: this.averageLatencyAll}, this);
@@ -156,7 +162,6 @@ export class Editor implements OnInit, ReplyListener {
         }
         /// EndIfDef
 
-
         let diffs = sm.content.data;
 
         // Create Patch relative to document version
@@ -170,8 +175,6 @@ export class Editor implements OnInit, ReplyListener {
           this.client_shadow = this.dmp.patch_apply(patch, this.client_shadow)[0];
           this.editor.innerHTML = this.dmp.patch_apply(patch2, this.editor.innerHTML)[0];
         }
-
-
         break;
       case 'read':
       case 'subscribe':
@@ -399,12 +402,12 @@ export class Editor implements OnInit, ReplyListener {
 
   computeStatistic(index: number) {
 
-    console.log('index ', index);
+    //console.log('index ', index);
     let latencies: Map<number, number> = new Map();
     // Compute all latencies
     let k = 0;
-    console.log(this.requestsReceivedTime);
-    console.log(this.requestsSentTime);
+    //console.log(this.requestsReceivedTime);
+    //console.log(this.requestsSentTime);
     for (let i = index; i < index + this.sampleRate; i++) {
       if (this.requestsReceivedTime.get(i)) {
         // latency[request_i] = T_req_Received[i] - T_req_Sent[i]
@@ -424,7 +427,7 @@ export class Editor implements OnInit, ReplyListener {
     this.averageLatencyAll = s / latencies.size;
     this.averageLatencyAll = Math.round(this.averageLatencyAll * 100) / 100;
 
-    console.log(this.averageLatencyAll);
+    //console.log(this.averageLatencyAll);
     return this.averageLatencyAll;
 
 /*

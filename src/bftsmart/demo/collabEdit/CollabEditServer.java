@@ -61,6 +61,8 @@ public class CollabEditServer extends DefaultRecoverable implements Replier {
     long measureInterval = 1000; // 1 second
     long saveInterval = 30000; // 30 s
 
+    OperatingSystemMXBean bean =  ManagementFactory.getPlatformMXBean(OperatingSystemMXBean.class);
+
 
     public CollabEditServer(int id, boolean verbose) {
         for (int i = 0; i < subscribers.length; i++) {
@@ -73,6 +75,8 @@ public class CollabEditServer extends DefaultRecoverable implements Replier {
 
         String line = "AppTime,SysTime,Throughput,MAXThroughput,#ClientsWriting,#Patches,ClientLatency,DocLength,CPULoad";
         lines.add(line);
+
+        System.out.println("Num Cores " + bean.getAvailableProcessors());
 
     }
 
@@ -171,7 +175,7 @@ public class CollabEditServer extends DefaultRecoverable implements Replier {
             patchesCount = 0;
             simultanWritingClients.clear();
 
-            if (currentTime > saveStatsTime + saveInterval) {
+            if (currentTime > saveStatsTime + saveInterval && this.replica.getId() == 0) {
                 Path file = Paths.get("/home/bergerch/performance.csv");
                 try {
                     Files.write(file, lines, Charset.forName("UTF-8"));
@@ -404,9 +408,8 @@ public class CollabEditServer extends DefaultRecoverable implements Replier {
             System.out.println(s);
     }
 
-    public static double getProcessCpuLoad() throws Exception {
-        OperatingSystemMXBean bean = (com.sun.management.OperatingSystemMXBean) ManagementFactory.getOperatingSystemMXBean();
-        return bean.getProcessCpuLoad() * 100;
+    public double getProcessCpuLoad() throws Exception {
+        return bean.getProcessCpuLoad() * 100 * bean.getAvailableProcessors();
     }
 
 }
