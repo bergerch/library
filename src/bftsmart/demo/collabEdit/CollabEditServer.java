@@ -85,7 +85,7 @@ public class CollabEditServer extends DefaultRecoverable implements Replier {
             System.out.println("Expected <processId>");
             System.exit(-1);
         }
-        boolean verbose = true;
+        boolean verbose = false;
         if (args.length > 1) {
             try {
                 verbose = Boolean.parseBoolean(args[1]);
@@ -121,6 +121,9 @@ public class CollabEditServer extends DefaultRecoverable implements Replier {
         iterations++;
 
         /** BEGIN Performance measurement */
+
+        if (iterations == 0)
+            appStartTime = System.currentTimeMillis();
 
         // if (msgCtx != null && msgCtx.getFirstInBatch() != null) {
         // msgCtx.getFirstInBatch().executedTime = System.nanoTime();

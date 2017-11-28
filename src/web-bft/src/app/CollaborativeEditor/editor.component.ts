@@ -51,7 +51,7 @@ export class Editor implements OnInit, ReplyListener {
   averageLatency_10nd_decile: number = 0;
   standard_deviation: number = 0;
   statisticComputed: boolean = false;
-  sampleRate: number = 10;
+  sampleRate: number = 100;
   sampleCount: number = 0;
   startedAutoWrite = false;
 
@@ -61,7 +61,6 @@ export class Editor implements OnInit, ReplyListener {
     let url = router.url.toString();
     this.measureLatency = url.charAt(url.length - 1) == 'l';
     console.log(this.measureLatency);
-    this.sampleRate =  1000 / this.interval;
     console.log('sample Rate ', this.sampleRate);
   }
 
@@ -115,7 +114,7 @@ export class Editor implements OnInit, ReplyListener {
         this.editorProxy.invokeUnordered({operation: 'read'}, this);
         this.subscribed = true;
       } else {
-        if (!this.startedAutoWrite && num > 10) {
+        if (!this.startedAutoWrite && num > 2) {
           this.autoWritePerformanceMeasurement();
           this.startedAutoWrite = true;
         }
@@ -145,9 +144,9 @@ export class Editor implements OnInit, ReplyListener {
           this.requestReceived++;
           this.sampleCount++;
           this.requestsReceivedTime.set(sm.sequence, window.performance.now());
-          if (this.sampleCount % this.sampleRate === 0 && this.measureLatency) {
+          if (this.sampleCount % (1000 / this.interval) === 0 && this.measureLatency) {
             // console.log('compute Statistic');
-            this.averageLatencyAll = this.computeStatistic(this.sampleCount-this.sampleRate);
+            this.averageLatencyAll = this.computeStatistic(sm.sequence);
             this.averageLatencyAll = isNaN(this.averageLatencyAll) ? -1.0 : this.averageLatencyAll;
             this.editorProxy.invokeOrdered({operation:"latency-measurement", data: this.averageLatencyAll}, this);
           }
@@ -402,6 +401,9 @@ export class Editor implements OnInit, ReplyListener {
 
   computeStatistic(index: number) {
 
+
+    index = index - this.sampleRate > 0 ? index - this.sampleRate : 0;
+
     //console.log('index ', index);
     let latencies: Map<number, number> = new Map();
     // Compute all latencies
@@ -421,8 +423,9 @@ export class Editor implements OnInit, ReplyListener {
 
     // Compute average Latency of all latencies
     let s = 0;
-    for (let i = 0; i < latencies.size; i++) {
-      s += latencies.get(i);
+    for (let i = 0; i < this.sampleRate; i++) {
+      if (latencies.get(i) > 0)
+        s += latencies.get(i);
     }
     this.averageLatencyAll = s / latencies.size;
     this.averageLatencyAll = Math.round(this.averageLatencyAll * 100) / 100;

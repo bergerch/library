@@ -44,7 +44,7 @@ export class TOMConfiguration {
 
     // Replicas ID for the initial view, separated by a comma.
     // The number of replicas in this parameter should be equal to that specified in 'system.servers.num'
-  initial_view = [0, 1, 2, 3];
+  initial_view = [0,1,2,3];
 
   // The ID of the trust third party (TTP)
   ttp_id = 7002;

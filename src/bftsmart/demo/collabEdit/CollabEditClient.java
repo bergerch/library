@@ -51,7 +51,7 @@ class CollabEditClient implements ReplyListener {
     Map<Integer, Long> requestsSentTime = new HashMap();
     Map<Integer, Long> requestsReceivedTime = new HashMap();
     double averageLatencyAll = -1;
-    int sampleRate = 10;
+    int sampleRate = 50;
     int sampleCount = 0;
     int num = 0;
     boolean ui = false;
@@ -261,7 +261,7 @@ class CollabEditClient implements ReplyListener {
                     this.sampleCount++;
                     this.requestsReceivedTime.put(reply.getSequence(), System.nanoTime());
                     if (this.measureLatency && this.sampleCount % this.sampleRate == 0) {
-                        this.averageLatencyAll = this.computeStatistic(this.sampleCount - this.sampleRate);
+                        this.averageLatencyAll = this.computeStatistic(reply.getSequence());
                         // {operation:"latency-measurement", data: this.averageLatencyAll}
                         String op = "{\"operation\":\"latency-measurement\",\"data\":" + this.averageLatencyAll + "}";
                         this.editorProxy.invokeAsynchRequest(op.getBytes(), this, TOMMessageType.ORDERED_REQUEST);
@@ -302,6 +302,7 @@ class CollabEditClient implements ReplyListener {
 
 
     public double computeStatistic(int index) {
+        index = index - sampleRate > 0 ? index - sampleRate : 0;
         HashMap<Integer, Double> latencies = new HashMap<>();
         // Compute all latencies
         int k = 0;
@@ -319,8 +320,7 @@ class CollabEditClient implements ReplyListener {
         for (int i = 0; i < latencies.size(); i++) {
             s += latencies.get(i);
         }
-        this.averageLatencyAll = (s / latencies.size()) / 1000;
-
+        this.averageLatencyAll = latencies.size() != 0 ? (s / latencies.size()) / 1000 : -1;
         return this.averageLatencyAll;
     }
 
