@@ -190,6 +190,10 @@ public class ServiceReplica {
         }
     }
 
+    public int getCurrentLeader() {
+        return tomLayer.execManager.getCurrentLeader();
+    }
+
     private void initReplica() {
         cs.start();
         repMan = new ReplyManager(SVController.getStaticConf().getNumRepliers(), cs);

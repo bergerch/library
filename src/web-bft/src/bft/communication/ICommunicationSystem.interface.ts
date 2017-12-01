@@ -16,7 +16,7 @@ export interface ICommunicationSystem {
    * @param sm
    * @param replyReceiver
    */
-  send(sign: boolean, sm: TOMMessage, replyReceiver?: ReplyReceiver);
+  send(sign: boolean, sm: TOMMessage, replyReceiver?: ReplyReceiver, simulate_MAC_attack?: boolean);
 
 
   /**

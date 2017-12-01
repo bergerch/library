@@ -92,21 +92,31 @@ export class CommunicationSystem implements ICommunicationSystem {
    * @param sign not used / implemented currently
    * @param sm TOMMessage
    * @param replyReceiver
+   * @param simulate_MAC_attack
    */
-  public send(sign: boolean, sm: TOMMessage, replyReceiver?: ReplyReceiver) {
+  public send(sign: boolean, sm: TOMMessage, replyReceiver?: ReplyReceiver, simulate_MAC_attack?: boolean) {
 
     // Subscribe: When reply is received, parse JSON and execute replyListener
     this.sessionTable.forEach((connection: ReplicaConnection) => {
       connection.subscribe((reply) => this.receive(reply, replyReceiver, connection));
     });
 
+    let randomReplica;
+    if (simulate_MAC_attack) {
+      let numServers: number = this.clientViewController.getCurrentViewProcesses().length;
+      let pos = Math.floor(Math.random() * numServers);
+      randomReplica = this.clientViewController.getCurrentViewProcesses()[pos];
+    }
+
     // Send Message to all replicas
     this.sessionTable.forEach((connection: ReplicaConnection) => {
 
       // Creates MAC
       let hmac = this.TOMConfiguration.useMACs ? connection.computeMAC(JSON.stringify(sm)) : '';
+      if (simulate_MAC_attack && connection.getReplicaId() !== randomReplica) {
+           hmac = 'XxXx-CORRUPT-XxXxX_'+sm.sequence;
+      }
       let message = {data: sm, hmac: hmac};
-
       this.log('send messsage + hmac', message);
 
       connection.send(message);

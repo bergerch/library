@@ -73,7 +73,7 @@ public class CollabEditServer extends DefaultRecoverable implements Replier {
         totalLatency = new Storage(interval);
         executeLatency = new Storage(interval);
 
-        String line = "AppTime,SysTime,Throughput,MAXThroughput,#ClientsWriting,#Patches,ClientLatency,DocLength,CPULoad";
+        String line = "AppTime,SysTime,Leader,Throughput,MAXThroughput,#ClientsWriting,#Patches,ClientLatency,DocLength,CPULoad";
         lines.add(line);
 
         System.out.println("Num Cores " + bean.getAvailableProcessors());
@@ -145,8 +145,11 @@ public class CollabEditServer extends DefaultRecoverable implements Replier {
             line += currentTime - appStartTime;
             line += ",";
             System.out.println("System Time = " + currentTime);
+            int leader = this.replica.getCurrentLeader();
+            System.out.println("LEADER "+ leader);
             line += currentTime + ",";
             tp = (float) (patchesCount * 1000 / (float) (currentTime - startTime));
+            line += leader + ",";
             line += tp + ",";
             int simWritingClients = simultanWritingClients.size();
             if (tp > maxTp) maxTp = tp;
@@ -158,6 +161,7 @@ public class CollabEditServer extends DefaultRecoverable implements Replier {
             System.out.println("Client latency: " + this.client_latency);
             line += this.client_latency + ",";
             line += this.document.length() + ",";
+
 
             // System.out.println("Total latency = " + totalLatency.getAverage(false) / 1000 + " (+/- "+ (long)totalLatency.getDP(false) / 1000 +") us ");
             //float exeT = (float) executeLatency.getAverage(false);

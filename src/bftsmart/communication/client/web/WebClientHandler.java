@@ -143,9 +143,9 @@ public abstract class WebClientHandler extends ChannelInboundHandlerAdapter {
                 // Compare hmac computed with hmac received
                 if (!hmacReceived.equals(hmacComputed)) {
 
-                    System.out.println(" =/= HMACS NOT EQUAL");
-                    System.out.println("HMAC RECEIVED " + hmacReceived);
-                    System.out.println("HMAC COMPUTED " + hmacComputed);
+                  //  System.out.println(" =/= HMACS NOT EQUAL");
+                  //  System.out.println("HMAC RECEIVED " + hmacReceived);
+                  //  System.out.println("HMAC COMPUTED " + hmacComputed);
 
                     // !!! Break out from method, do not deliver message to TOM Layer
                     return;

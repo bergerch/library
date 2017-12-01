@@ -16,9 +16,9 @@ import {Router} from "@angular/router";
 export class Runner implements OnInit, ReplyListener {
 
 
-  numberOfOps: number = 40000000; // How many operations each client executs e.g. the number of requests
-  requestSize: number = 4000; // Number of Bytes of content field for a message
-  interval: number = 0; // Milliseconds a client waits before sending the next request
+  numberOfOps: number = 200000; // How many operations each client executs e.g. the number of requests
+  requestSize: number = 20; // Number of Bytes of content field for a message
+  interval: number = 10; // Milliseconds a client waits before sending the next request
   readOnly: boolean = false; // If client should send read-only requests instead of ordered requests
   dos: boolean = false; // For simulating a dos attack
 
@@ -48,10 +48,14 @@ export class Runner implements OnInit, ReplyListener {
 
   statisticComputed: boolean = false;
 
+  simulate_Mac_Attack: boolean = false;
+
   constructor(private proxy: ServiceProxy, router: Router) {
     let url = router.url.toString();
     this.measureLatency = url.charAt(url.length - 1) == 'l';
+    this.simulate_Mac_Attack = url.charAt(url.length - 1) == 'a';
     console.log(this.measureLatency);
+    console.log(this.simulate_Mac_Attack);
   }
 
   ngOnInit() {
@@ -75,7 +79,11 @@ export class Runner implements OnInit, ReplyListener {
         if (this.readOnly) {
           sequence = this.proxy.invokeUnordered({test: request}, this);
         } else {
-          sequence = this.proxy.invokeOrdered({test: request}, this);
+          if (!this.simulate_Mac_Attack) {
+            sequence = this.proxy.invokeOrdered({test: request}, this);
+          } else {
+            sequence = this.proxy.invokeOrderedSimulateMacAttack({test: request}, this);
+          }
         }
         if (this.requestSent % 100 == 0) {
           let newTime = window.performance.now();
@@ -134,7 +142,6 @@ export class Runner implements OnInit, ReplyListener {
     }
     this.averageLatencyAll = s / latencies.size;
     this.averageLatencyAll = Math.round(this.averageLatencyAll * 100) / 100;
-
 
     // Compute max Latency
     let max = 0;

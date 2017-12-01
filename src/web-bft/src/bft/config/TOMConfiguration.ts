@@ -108,7 +108,6 @@ export class TOMConfiguration {
   // Print information about the replica when it is shutdown
   shutdownhook = true;
 
-
   /** State Transfer Configurations */
 
     // Activate the state transfer protocol ('true' to activate, 'false' to de-activate)

@@ -154,6 +154,10 @@ export class ServiceProxy extends TOMSender implements ReplyReceiver {
     return this.invoke(request, TOMMessageType.ORDERED_REQUEST, replyListener);
   }
 
+  public invokeOrderedSimulateMacAttack(request, replyListener: ReplyListener): any {
+    return this.invoke(request, TOMMessageType.ORDERED_REQUEST, replyListener, '', true);
+  }
+
   public invokeUnordered(request, replyListener: ReplyListener): any {
     return this.invoke(request, TOMMessageType.UNORDERED_REQUEST, replyListener);
   }
@@ -183,8 +187,10 @@ export class ServiceProxy extends TOMSender implements ReplyReceiver {
    * @param request the request to be send
    * @param reqType type of request e.g. ordered, unordered
    * @param replyListener application defined callback, will be executed when response is obtained
+   * @param event
+   * @param simulate_MAC_attack
    */
-  private invoke(request, reqType: number, replyListener?: ReplyListener, event?: string): any {
+  private invoke(request, reqType: number, replyListener?: ReplyListener, event?: string, simulate_MAC_attack?: boolean): any {
 
     // Clear all stateful data to prepare for receiving next replies
 
@@ -223,7 +229,7 @@ export class ServiceProxy extends TOMSender implements ReplyReceiver {
 
     } else {
 
-      this.TOMulticastData(request, this.reqId, reqType, this.operationId, this, event);
+      this.TOMulticastData(request, this.reqId, reqType, this.operationId, this, event, simulate_MAC_attack);
 
     }
 
