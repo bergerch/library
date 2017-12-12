@@ -27,11 +27,11 @@ public class WebSocketHandler extends WebClientHandler {
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
 
         if (msg instanceof WebSocketFrame) {
-            //  System.out.println("This is a WebSocket frame");
+              //System.out.println("This is a WebSocket frame");
 
             if (msg instanceof BinaryWebSocketFrame) {
-                //  System.out.println("BinaryWebSocketFrame Received : ");
-                //  System.out.println(((BinaryWebSocketFrame) msg).content());
+                  System.out.println("BinaryWebSocketFrame Received : ");
+                  System.out.println(((BinaryWebSocketFrame) msg).content());
             } else if (msg instanceof TextWebSocketFrame) {
 
                 Logger.println(" Client ---> Replica | TextWebSocketFrame Received : " + ((TextWebSocketFrame) msg).text());

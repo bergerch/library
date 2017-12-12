@@ -85,7 +85,7 @@ public class CollabEditServer extends DefaultRecoverable implements Replier {
             System.out.println("Expected <processId>");
             System.exit(-1);
         }
-        boolean verbose = false;
+        boolean verbose = true;
         if (args.length > 1) {
             try {
                 verbose = Boolean.parseBoolean(args[1]);
@@ -158,7 +158,7 @@ public class CollabEditServer extends DefaultRecoverable implements Replier {
             System.out.println(patchesCount + " Patches computed");
             line += patchesCount + ",";
             System.out.println("Throughput = " + tp + " operations/sec (Maximum observed: " + maxTp + " patchesCount/sec)");
-            System.out.println("Client latency: " + this.client_latency);
+            // System.out.println("Client latency: " + this.client_latency);
             line += this.client_latency + ",";
             line += this.document.length() + ",";
 

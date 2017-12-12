@@ -30,7 +30,7 @@ export class Editor implements OnInit, ReplyListener {
 
   /** Performance measurement fields, only used for evaluation purpose */
   numberOfOps: number = 200000; // How many operations each client executs e.g. the number of requests
-  interval: number = 50; // Milliseconds a client waits before sending the next request
+  interval: number = 100; // Milliseconds a client waits before sending the next request
   readOnly: boolean = false; // If client should send read-only requests instead of ordered requests
   progress: number = 0; // For progress bar
   output;
@@ -115,15 +115,14 @@ export class Editor implements OnInit, ReplyListener {
         this.subscribed = true;
       } else {
         if (!this.startedAutoWrite && num > 2) {
-          this.autoWritePerformanceMeasurement();
-          this.startedAutoWrite = true;
+          //this.autoWritePerformanceMeasurement();
+          //this.startedAutoWrite = true;
         }
       }
     });
   }
 
   replyReceived(sm: TOMMessage) {
-
 
     // Fix cursor position
     let cursorPosition = this.getCurrentCursorPosition('editor');
@@ -164,12 +163,12 @@ export class Editor implements OnInit, ReplyListener {
         let diffs = sm.content.data;
 
         // Create Patch relative to document version
-        let patch_changed = this.dmp.patch_make(this.local_change, diffs);
+        //let patch_changed = this.dmp.patch_make(this.local_change, diffs);
         let patch = this.dmp.patch_make(this.client_shadow, diffs);
         let patch2 = this.dmp.patch_make(this.editor.innerHTML, diffs);
 
-        this.local_change = this.dmp.patch_apply(patch_changed, this.local_change)[0];
-        if (this.local_change != this.client_shadow) {
+        //this.local_change = this.dmp.patch_apply(patch_changed, this.local_change)[0];
+        if (/*this.local_change != this.client_shadow*/ sm.content.requester !== this.id) {
           // Apply Patch to document
           this.client_shadow = this.dmp.patch_apply(patch, this.client_shadow)[0];
           this.editor.innerHTML = this.dmp.patch_apply(patch2, this.editor.innerHTML)[0];
