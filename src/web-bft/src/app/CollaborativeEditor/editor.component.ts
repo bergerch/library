@@ -5,6 +5,7 @@ import {TOMConfiguration} from "../../bft/config/TOMConfiguration";
 import {TOMMessage} from "../../bft/tom/messages/TOMMessage";
 import {ReplyListener} from "../../bft/communication/ReplyListener.interface";
 import {Router} from "@angular/router";
+import {current} from "codelyzer/util/syntaxKind";
 
 
 @Component({
@@ -29,8 +30,8 @@ export class Editor implements OnInit, ReplyListener {
   id;
 
   /** Performance measurement fields, only used for evaluation purpose */
-  numberOfOps: number = 200000; // How many operations each client executs e.g. the number of requests
-  interval: number = 100; // Milliseconds a client waits before sending the next request
+  numberOfOps: number = 5000; // How many operations each client executs e.g. the number of requests
+  interval: number = 10; // Milliseconds a client waits before sending the next request
   readOnly: boolean = false; // If client should send read-only requests instead of ordered requests
   progress: number = 0; // For progress bar
   output;
@@ -51,7 +52,7 @@ export class Editor implements OnInit, ReplyListener {
   averageLatency_10nd_decile: number = 0;
   standard_deviation: number = 0;
   statisticComputed: boolean = false;
-  sampleRate: number = 100;
+  sampleRate: number = 2500;
   sampleCount: number = 0;
   startedAutoWrite = false;
 
@@ -106,7 +107,7 @@ export class Editor implements OnInit, ReplyListener {
   joinDocument() {
     this.editorObservable = Observable.interval(200);
     this.editorSubscription = this.editorObservable.subscribe((num) => {
-      if (!this.subscribed) {
+      if (!this.subscribed && num > 2) {
         // Subscribe to document changes
         this.editorProxy.invokeOrderedSubscribe({operation: 'subscribe', data: 'onDocChange'}, this, 'onDocChange');
 
@@ -143,7 +144,7 @@ export class Editor implements OnInit, ReplyListener {
           this.requestReceived++;
           this.sampleCount++;
           this.requestsReceivedTime.set(sm.sequence, window.performance.now());
-          if (this.sampleCount % (1000 / this.interval) === 0 && this.measureLatency) {
+          if (this.numberOfOps === this.requestReceived && this.measureLatency) {
             // console.log('compute Statistic');
             this.averageLatencyAll = this.computeStatistic(sm.sequence);
             this.averageLatencyAll = isNaN(this.averageLatencyAll) ? -1.0 : this.averageLatencyAll;
@@ -354,13 +355,16 @@ export class Editor implements OnInit, ReplyListener {
 
           let currentDoc = this.editor.innerHTML;
           let randomPosition = Math.floor(Math.random() * currentDoc.length);
-          let operationType = Math.random() > 0.49 ? 'INSERT' : 'DELETE';
+          //let operationType = Math.random() > 0.49 ? 'INSERT' : 'DELETE';
+          let operationType =  'INSERT';
 
           if (operationType === 'INSERT') {
             let pre = currentDoc.slice(0, randomPosition);
             let insertion = shakespeare.charAt(num % shakespeare.length);
             let post = currentDoc.slice(randomPosition);
-            currentDoc = pre + insertion + post;
+           // currentDoc = pre + insertion + post;
+            currentDoc = currentDoc + insertion;
+
           }
           if (operationType === 'DELETE') {
             let pre = currentDoc.slice(0, randomPosition);
@@ -430,9 +434,9 @@ export class Editor implements OnInit, ReplyListener {
     this.averageLatencyAll = Math.round(this.averageLatencyAll * 100) / 100;
 
     //console.log(this.averageLatencyAll);
-    return this.averageLatencyAll;
 
-/*
+
+
     // Compute max Latency
     let max = 0;
     for (let i = 0; i < latencies.size; i++) {
@@ -483,8 +487,10 @@ export class Editor implements OnInit, ReplyListener {
     this.standard_deviation = Math.sqrt(s / n);
     this.standard_deviation = Math.round(this.standard_deviation * 100) / 100;
 
-*/
-    //this.statisticComputed = true;
+
+    this.statisticComputed = true;
+
+    return this.averageLatencyAll;
   }
 
 }

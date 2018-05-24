@@ -7,12 +7,17 @@
 
   "version": "0.1",
   "permissions": [
-    "tabs", "http://*/*", "https://*/*"
+    "tabs", "http://*/*", "https://*/*",
+    "webRequest",
+    "webRequestBlocking",
+    "activeTab",
+    "<all_urls>",
+    "storage"
   ],
   "browser_action": {
       "default_title": "Connect to Byzantine Fault Tolerant Services",
       "default_icon": "byzanz.png",
-      "default_popup": "popup.html"
+      "default_popup": "BFT_validate.html"
   },
   "manifest_version": 2
 }
