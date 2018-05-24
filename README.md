@@ -52,7 +52,7 @@ As a Demo, a collaborative editor was implemented. The following steps are neces
 
 2) in src/web-bft run command ```ng serve``` in the shell. This will start a web dev server delivering the web client
 
-3) In the browser: Open localhost:4200/editor and you are ready to use the application
+3) In the browser: Open ```localhost:4200/editor/test``` and you are ready to use the application
 
 ## Deploying to Github Pages
 
