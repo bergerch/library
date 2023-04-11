@@ -36,8 +36,8 @@ public class TestWonderProxyLatencies {
 
         for (String client : clients) {
             try {
-                long[][] m = readMatrix("./data/wonderProxy/wonderProxyReplicasLightSpeed.csv", SIZE, SIZE, ","); // input
-                long[][] m_clients = readMatrix("./data/wonderProxy/wonderProxyClientsLightSpeed.csv", 12, SIZE, ","); // input
+                long[][] m = readMatrix("./data/wonderProxy/wonderProxyReplicasLightSpeed1c.csv", SIZE, SIZE, ","); // input
+                long[][] m_clients = readMatrix("./data/wonderProxy/wonderProxyClientsLightSpeed1c.csv", 12, SIZE, ","); // input
 
                 int replicaset[] = makeReplicaSet(SIZE);
 
