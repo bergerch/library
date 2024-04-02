@@ -176,6 +176,7 @@ public class FindOptimalWeightConfigTest {
     }
 
 
+
     private static long[][] generateTestM(int n) {
 
         long[][] M = new long[n][n];

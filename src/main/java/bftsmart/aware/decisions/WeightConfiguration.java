@@ -137,7 +137,7 @@ public class WeightConfiguration {
     }
 
 
-    private void combinationUtil(int arr[], int data[], int start, int end, int index, int r) {
+    public void combinationUtil(int arr[], int data[], int start, int end, int index, int r) {
         // Current combination is ready to be printed, print it
         if (index == r) {
             List<Integer> combination = new ArrayList<>();
