@@ -2,6 +2,7 @@ package bftsmart.tom.client;
 
 import bftsmart.tom.core.messages.TOMMessage;
 import bftsmart.tom.core.messages.TOMMessageType;
+import bftsmart.tom.util.ServiceResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -27,8 +28,9 @@ public abstract class AbstractRequestHandler {
 	protected final int replyQuorumSize;
 	private final Semaphore semaphore;
 	protected Set<Integer> replySenders;
-	private TOMMessage response;
+	private ServiceResponse response;
 	private boolean requestTimeout;
+	protected boolean thereIsReplicaSpecificContent;
 
 	public AbstractRequestHandler(int me, int session, int sequenceId, int operationId,
 								  int viewId, TOMMessageType requestType, int timeout, int[] replicas,
@@ -51,7 +53,7 @@ public abstract class AbstractRequestHandler {
 		}
 	}
 
-	public abstract TOMMessage createRequest(byte[] request);
+	public abstract TOMMessage createRequest(byte[] request, boolean hasReplicaSpecificContent, byte metadata);
 
 	public void waitForResponse() throws InterruptedException {
 		if (!semaphore.tryAcquire(timeout, TimeUnit.SECONDS)) {
@@ -63,26 +65,27 @@ public abstract class AbstractRequestHandler {
 	 * This method returns the response.
 	 * Call this method after calling waitForResponse() method.
 	 * @return Response to the request
-	 * @requires call this method after calling waitForResponse() method
+	 * @requires all this method after calling waitForResponse() method
 	 */
-	public TOMMessage getResponse() {
+	public ServiceResponse getResponse() {
 		return response;
 	}
 
 	public void processReply(TOMMessage reply) {
 		if (response != null) {//no message being expected
-			logger.debug("throwing out request: sender = {} reqId = {}", reply.getSender(), reply.getSequence());
+			logger.debug("[Client {}] throwing out request: sender = {} reqId = {}", me, reply.getSender(),
+					reply.getSequence());
 			return;
 		}
-		logger.debug("(current reqId: {}) Received reply from {} with reqId: {}", sequenceId, reply.getSender(),
-				reply.getSequence());
+		logger.debug("[Client {}] (current reqId: {}) Received reply from {} with reqId: {}", me, sequenceId,
+				reply.getSender(), reply.getSequence());
 		Integer lastSenderIndex = replicaIndex.get(reply.getSender());
 		if (lastSenderIndex == null) {
-			logger.error("Received reply from unknown replica {}", reply.getSender());
+			logger.error("[Client {}] Received reply from unknown replica {}", me, reply.getSender());
 			return;
 		}
 		if (sequenceId != reply.getSequence() || requestType != reply.getReqType()) {
-			logger.debug("Ignoring reply from {} with reqId {}. Currently wait reqId {} of type {}",
+			logger.debug("[Client {}] Ignoring reply from {} with reqId {}. Currently wait reqId {} of type {}", me,
 					reply.getSender(), reply.getSequence(), sequenceId, requestType);
 			return;
 		}
@@ -92,13 +95,16 @@ public abstract class AbstractRequestHandler {
 		replySenders.add(reply.getSender());
 		replies[lastSenderIndex] = reply;
 
+		if (reply.getReplicaSpecificContent() != null) {
+			thereIsReplicaSpecificContent = true;
+		}
 		response = processReply(reply, lastSenderIndex);
 		if (response != null || replySenders.size() == replicas.length) {
 			semaphore.release();
- 		}
+		}
 	}
 
-	public abstract TOMMessage processReply(TOMMessage reply, int lastSenderIndex);
+	protected abstract ServiceResponse processReply(TOMMessage reply, int lastSenderIndex);
 
 	public int getSequenceId() {
 		return sequenceId;

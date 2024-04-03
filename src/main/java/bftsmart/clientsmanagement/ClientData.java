@@ -18,7 +18,8 @@ package bftsmart.clientsmanagement;
 import java.security.PublicKey;
 import java.security.Signature;
 import java.security.SignatureException;
-import java.util.Iterator;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.locks.ReentrantLock;
 
 import bftsmart.tom.core.messages.TOMMessage;
@@ -31,11 +32,11 @@ public class ClientData {
 
     public static final int MAX_SIZE_ORDERED_REQUESTS = 5;
 
-    private Logger logger = LoggerFactory.getLogger(this.getClass());
+    private final Logger logger = LoggerFactory.getLogger(this.getClass());
 
     ReentrantLock clientLock = new ReentrantLock();
 
-    private int clientId;
+    private final int clientId;
     //private PublicKey publicKey = null;
 
     private int session = -1;
@@ -45,13 +46,14 @@ public class ClientData {
 
     private int lastMessageDelivered = -1;
 
-    private RequestList pendingRequests = new RequestList();
+    private final RequestList pendingRequests = new RequestList();
     //anb: new code to deal with client requests that arrive after their execution
-    private RequestList orderedRequests = new RequestList(MAX_SIZE_ORDERED_REQUESTS);
-    private RequestList replyStore = new RequestList(MAX_SIZE_ORDERED_REQUESTS);
+    private final RequestList orderedRequests = new RequestList(MAX_SIZE_ORDERED_REQUESTS);
+    private final RequestList replyStore = new RequestList(MAX_SIZE_ORDERED_REQUESTS);
 
     private Signature signatureVerificator = null;
-    
+	private final Map<Integer, byte[]> replicaSpecificContents;
+
     /**
      * Class constructor. Just store the clientId and creates a signature
      * verificator for a given client public key.
@@ -61,6 +63,7 @@ public class ClientData {
      */
     public ClientData(int clientId, PublicKey publicKey) {
         this.clientId = clientId;
+		this.replicaSpecificContents = new HashMap<>();
         if(publicKey != null) {
             try {
                 signatureVerificator = TOMUtil.getSigEngine();
@@ -177,4 +180,22 @@ public class ClientData {
         return this.replyStore;
     }
 
+	public void storeReplicaSpecificContent(int sequence, byte[] replicaSpecificContent) {
+		replicaSpecificContents.put(sequence, replicaSpecificContent);
+	}
+
+	public byte[] removeReplicaSpecificContent(int sequence) {
+		return replicaSpecificContents.remove(sequence);
+	}
+
+	public byte[] getReplicaSpecificContent(int sequence) {
+		return replicaSpecificContents.get(sequence);
+	}
+
+	public void storeReply(int sequence, TOMMessage reply) {
+		TOMMessage request = orderedRequests.getBySequence(sequence);
+		if (request != null) {
+			request.reply = reply;
+		}
+	}
 }

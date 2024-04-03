@@ -35,6 +35,7 @@ import bftsmart.tom.ReplicaContext;
 import bftsmart.tom.core.messages.TOMMessage;
 import bftsmart.tom.server.BatchExecutable;
 import bftsmart.tom.server.Recoverable;
+import bftsmart.tom.util.ServiceContent;
 import bftsmart.tom.util.TOMUtil;
 
 import org.slf4j.Logger;
@@ -75,11 +76,18 @@ public abstract class DefaultRecoverable implements Recoverable, BatchExecutable
     }
 
     @Override
-    public byte[][] executeBatch(byte[][] commands, MessageContext[] msgCtxs) {
-        return executeBatch(commands, msgCtxs, false);
+    public ServiceContent[] executeBatch(byte[][] commands, byte[][] replicaSpecificContents,
+										 MessageContext[] msgCtxs) {
+		byte[][] responses = executeBatch(commands, replicaSpecificContents, msgCtxs, false);
+		ServiceContent[] serviceRespons = new ServiceContent[responses.length];
+		for (int i = 0; i < responses.length; i++) {
+			serviceRespons[i] = new ServiceContent(responses[i]);
+		}
+		return serviceRespons;
     }
 
-    private byte[][] executeBatch(byte[][] commands, MessageContext[] msgCtxs, boolean noop) {
+    private byte[][] executeBatch(byte[][] commands, byte[][] replicaSpecificContents, MessageContext[] msgCtxs,
+								  boolean noop) {
 
         int cid = msgCtxs[msgCtxs.length-1].getConsensusId();
 
@@ -93,7 +101,6 @@ public abstract class DefaultRecoverable implements Recoverable, BatchExecutable
         if (checkpointIndex == -1) {
 
             if (!noop) {
-
                 stateLock.lock();
                 replies = appExecuteBatch(commands, msgCtxs, true);
                 stateLock.unlock();
@@ -102,7 +109,7 @@ public abstract class DefaultRecoverable implements Recoverable, BatchExecutable
             saveCommands(commands, msgCtxs);
 
             if (!noop && controller.getStaticConf().useReadOnlyRequests()) {
-                saveReplies(commands, msgCtxs, replies, cid);
+                saveReplies(commands, msgCtxs, replies, cid, replicaSpecificContents);
             }
         } else {
             // there is a replica supposed to take the checkpoint. In this case, the commands
@@ -136,7 +143,7 @@ public abstract class DefaultRecoverable implements Recoverable, BatchExecutable
                 stateLock.unlock();
             }
             if (controller.getStaticConf().useReadOnlyRequests()) {
-                saveReplies(firstHalf, firstHalfMsgCtx, firstHalfReplies, cid);
+                saveReplies(firstHalf, firstHalfMsgCtx, firstHalfReplies, cid, replicaSpecificContents);
             }
             logger.info("Performing checkpoint for consensus " + cid);
             stateLock.lock();
@@ -166,7 +173,7 @@ public abstract class DefaultRecoverable implements Recoverable, BatchExecutable
 
                 logger.debug("Storing message batch in the state log for consensus " + cid);
                 saveCommands(secondHalf, secondHalfMsgCtx);
-                saveReplies(secondHalf, secondHalfMsgCtx, secondHalfReplies, cid);
+                saveReplies(secondHalf, secondHalfMsgCtx, secondHalfReplies, cid, replicaSpecificContents);
 
                 System.arraycopy(secondHalfReplies, 0, replies, firstHalfReplies.length, secondHalfReplies.length);
             }
@@ -179,7 +186,7 @@ public abstract class DefaultRecoverable implements Recoverable, BatchExecutable
         return replies;
     }
 
-    private final byte[] computeHash(byte[] data) {
+    private byte[] computeHash(byte[] data) {
         byte[] ret = null;
         hashLock.lock();
         ret = md.digest(data);
@@ -210,11 +217,12 @@ public abstract class DefaultRecoverable implements Recoverable, BatchExecutable
     }
 
 
-    private void saveReplies(byte[][] commands, MessageContext[] msgCtxs, byte[][] results,  int lastCID) {
+    private void saveReplies(byte[][] commands, MessageContext[] msgCtxs, byte[][] results,  int lastCID,
+                             byte[][] replicaSpecificContents) {
         TOMMessage[] executedRequests = new TOMMessage[msgCtxs.length];
         for (int i = 0; i < msgCtxs.length; i++) {
             executedRequests[i] = getTOMMessage(controller.getStaticConf().getProcessId(), controller.getCurrentViewId(),
-                    commands[i], msgCtxs[i], results[i]);
+                    commands[i], msgCtxs[i], results[i], replicaSpecificContents[i]);
         }
         if (clientsManager != null) {
             // Signal clientsManager that requests have been executed
@@ -493,19 +501,19 @@ public abstract class DefaultRecoverable implements Recoverable, BatchExecutable
     }
 
     @Override
-    public byte[] executeUnordered(byte[] command, MessageContext msgCtx) {
-        return appExecuteUnordered(command, msgCtx);
+    public ServiceContent executeUnordered(byte[] command, byte[] replicaSpecificContent, MessageContext msgCtx) {
+        return new ServiceContent(appExecuteUnordered(command, msgCtx));
     }
     
     @Override
-    public void Op(int CID, byte[] requests, MessageContext msgCtx) {
+    public void Op(int CID, byte[] requests, byte[] replicaSpecificContent, MessageContext msgCtx) {
         //Requests are logged within 'executeBatch(...)' instead of in this method.
     }
     
     @Override
-    public void noOp(int CID, byte[][] operations, MessageContext[] msgCtxs) {
+    public void noOp(int CID, byte[][] operations, byte[][] replicaSpecificContents, MessageContext[] msgCtxs) {
         
-        executeBatch(operations, msgCtxs, true);
+        executeBatch(operations, replicaSpecificContents, msgCtxs, true);
 
     }
     

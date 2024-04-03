@@ -22,15 +22,15 @@ import bftsmart.tom.core.messages.TOMMessage;
  * ServiceProxy.
  *
  */
-public interface Extractor {
-    
-    /**
-	 * Extracts a reply given a set of replies from a set of replicas.
-	 *
-	 * @param replies      Set of replies from a set of replicas.
-	 * @param sameContent  Whether or not the replies are supposed to have the same content
-	 * @param lastReceived Last reply received from the replicas. This is an index in relation to the `replies` parameter.
-	 * @return
+public interface HashedExtractor {
+
+	/**
+	 * Extracts a reply given a set of replies and full response reply.
+	 * @param replies Set of replies from a set of replicas.
+	 * @param fullReply Full response from the replica that sent the full response.
+	 * @param fullReplyHash Hash of the full response.
+	 * @return The extracted response.
 	 */
-    ServiceResponse extractResponse(TOMMessage[] replies, int sameContent, int lastReceived);
+    ServiceResponse extractHashedResponse(TOMMessage[] replies, TOMMessage fullReply, byte[] fullReplyHash,
+										  int sameContent);
 }

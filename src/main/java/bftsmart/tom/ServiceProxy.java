@@ -15,6 +15,7 @@
  */
 package bftsmart.tom;
 
+import bftsmart.reconfiguration.IClientSideReconfigurationListener;
 import bftsmart.reconfiguration.ReconfigureReply;
 import bftsmart.reconfiguration.views.View;
 import bftsmart.tom.client.AbstractRequestHandler;
@@ -23,14 +24,13 @@ import bftsmart.tom.client.NormalRequestHandler;
 import bftsmart.tom.core.TOMSender;
 import bftsmart.tom.core.messages.TOMMessage;
 import bftsmart.tom.core.messages.TOMMessageType;
-import bftsmart.tom.util.Extractor;
-import bftsmart.tom.util.KeyLoader;
-import bftsmart.tom.util.TOMUtil;
+import bftsmart.tom.util.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.Arrays;
 import java.util.Comparator;
+import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -47,12 +47,15 @@ public class ServiceProxy extends TOMSender {
 	protected ReentrantLock canReceiveLock = new ReentrantLock();
 	protected ReentrantLock canSendLock = new ReentrantLock();
 	private int invokeTimeout;
-	private final Comparator<byte[]> comparator;
+	private final Comparator<ServiceContent> comparator;
 	private final Extractor extractor;
+	private final HashedExtractor hashedExtractor;
 	private final Random rand = new Random(System.currentTimeMillis());
 	private int invokeUnorderedHashedTimeout = 10;
 
 	private AbstractRequestHandler requestHandler; //Active request context
+	private final IClientSideReconfigurationListener reconfigurationListener;
+	private final int me;
 
 	/**
 	 * Constructor
@@ -60,7 +63,11 @@ public class ServiceProxy extends TOMSender {
 	 * @see #ServiceProxy(int, String, Comparator, Extractor, KeyLoader)
 	 */
 	public ServiceProxy(int processId) {
-		this(processId, null, null, null, null);
+		this(processId, null, null, null, null, null, null);
+	}
+
+	public ServiceProxy(int processId, IClientSideReconfigurationListener reconfigurationListener) {
+		this(processId, null, null, null, null, null, reconfigurationListener);
 	}
 
 	/**
@@ -69,7 +76,7 @@ public class ServiceProxy extends TOMSender {
 	 * @see #ServiceProxy(int, String, Comparator, Extractor, KeyLoader)
 	 */
 	public ServiceProxy(int processId, String configHome) {
-		this(processId, configHome, null, null, null);
+		this(processId, configHome, null, null, null, null, null);
 	}
 
 	/**
@@ -78,7 +85,7 @@ public class ServiceProxy extends TOMSender {
 	 * @see #ServiceProxy(int, String, Comparator, Extractor, KeyLoader)
 	 */
 	public ServiceProxy(int processId, String configHome, KeyLoader loader) {
-		this(processId, configHome, null, null, loader);
+		this(processId, configHome, null, null, null, loader, null);
 	}
 
 	/**
@@ -93,14 +100,41 @@ public class ServiceProxy extends TOMSender {
 	 * @param loader Used to load signature keys from disk
 	 */
 	public ServiceProxy(int processId, String configHome,
-						Comparator<byte[]> replyComparator, Extractor replyExtractor, KeyLoader loader) {
+						Comparator<ServiceContent> replyComparator, Extractor replyExtractor, KeyLoader loader) {
+		this(processId, configHome, replyComparator, replyExtractor, null, loader, null);
+	}
+
+	public ServiceProxy(int processId, String configHome,
+						Comparator<ServiceContent> replyComparator, Extractor replyExtractor,
+						HashedExtractor hashedReplyExtractor) {
+		this(processId, configHome, replyComparator, replyExtractor, hashedReplyExtractor, null, null);
+	}
+
+	public ServiceProxy(int processId, String configHome,
+						Comparator<ServiceContent> replyComparator, Extractor replyExtractor,
+						HashedExtractor hashedReplyExtractor,
+						IClientSideReconfigurationListener reconfigurationListener) {
+		this(processId, configHome, replyComparator, replyExtractor, hashedReplyExtractor,
+				null, reconfigurationListener);
+	}
+
+	public ServiceProxy(int processId, String configHome,
+						Comparator<ServiceContent> replyComparator, Extractor replyExtractor,
+						HashedExtractor hashedReplyExtractor, KeyLoader loader,
+						IClientSideReconfigurationListener reconfigurationListener) {
 		super(processId, configHome, loader);
+		this.me = processId;
 		this.invokeTimeout = getViewManager().getStaticConf().getClientInvokeOrderedTimeout();
 
 		comparator = (replyComparator != null) ? replyComparator
-				: (o1, o2) -> Arrays.equals(o1, o2) ? 0 : -1;
-		extractor = (replyExtractor != null) ? replyExtractor
-				: (replies, sameContent, lastReceived) -> replies[lastReceived];
+				: (o1, o2) -> Arrays.equals(o1.getCommonContent(), o2.getCommonContent()) ? 0 : -1;
+		extractor = (replyExtractor != null) ? replyExtractor :
+				(replies, sameContent, lastReceived)
+						-> new ServiceResponse(replies[lastReceived].getContent().getCommonContent());
+		hashedExtractor = (hashedReplyExtractor != null) ? hashedReplyExtractor :
+				(replies, fullReply, fullReplyHash, sameContent)
+						-> new ServiceResponse(fullReply.getContent().getCommonContent());
+		this.reconfigurationListener = reconfigurationListener;
 	}
 
 	/**
@@ -155,6 +189,16 @@ public class ServiceProxy extends TOMSender {
 		return invoke(request, TOMMessageType.ORDERED_REQUEST);
 	}
 
+	/**
+	 * This method sends an ordered request to the replicas, and returns the related reply.
+	 * This method chooses randomly one replica to send the complete response, while the others
+	 * only send a hash of that response.
+	 * If the servers take more than invokeTimeout seconds the method returns null.
+	 * This method is thread-safe.
+	 *
+	 * @param request to be sent
+	 * @return The reply from the replicas related to request
+	 */
 	public byte[] invokeOrderedHashed(byte[] request) {
 		return invoke(request, TOMMessageType.ORDERED_HASHED_REQUEST);
 	}
@@ -197,17 +241,40 @@ public class ServiceProxy extends TOMSender {
 	 * @return The reply from the replicas related to request
 	 */
 	public byte[] invoke(byte[] request, TOMMessageType reqType) {
+		ServiceResponse response = invoke(reqType, request, null, (byte) -1);
+		if (response == null) {
+			return null;
+		} else {
+			return response.getContent();
+		}
+	}
+
+	/**
+	 * This method sends a request to the replicas, and returns the related reply.
+	 * If the servers take more than invokeTimeout seconds the method returns null.
+	 * This method is thread-safe.
+	 *
+	 * @param reqType ORDERED_REQUEST/ORDERED_HASHED_REQUEST/UNORDERED_REQUEST/UNORDERED_HASHED_REQUEST
+	 *                for normal requests, and RECONFIG for reconfiguration requests.
+	 * @param request Request to be sent
+	 * @param replicaSpecificContents Map with replica specific contents
+	 * @param metadata Metadata to be sent with the request
+	 * @return The reply from the replicas related to request
+	 */
+	public ServiceResponse invoke(TOMMessageType reqType, byte[] request, Map<Integer, byte[]> replicaSpecificContents,
+								  byte metadata) {
 		try {
 			canSendLock.lock();
 
 			requestHandler = createRequestHandler(reqType);
 
-			TOMMessage requestMessage = requestHandler.createRequest(request);
+			TOMMessage requestMessage = requestHandler.createRequest(request,
+					replicaSpecificContents != null, metadata);
 
-			logger.debug("Sending request ({}) with seqId = {}", reqType, requestHandler.getSequenceId());
-			TOMulticast(requestMessage);
+			logger.debug("[Client {}] Sending request ({}) with seqId = {}", me, reqType, requestHandler.getSequenceId());
+			TOMulticast(requestMessage, replicaSpecificContents);
 
-			logger.debug("Expected number of matching replies: {}", requestHandler.getReplyQuorumSize());
+			logger.debug("[Client {}] Expected number of matching replies: {}", me, requestHandler.getReplyQuorumSize());
 
 			// This instruction blocks the thread, until a response is obtained.
 			// The thread will be unblocked when the method replyReceived is invoked
@@ -215,64 +282,64 @@ public class ServiceProxy extends TOMSender {
 			requestHandler.waitForResponse();
 
 			if (requestHandler.isRequestTimeout()) {
-				logger.info("###### TIMEOUT ({}s) OF REQUEST {} | seqId: {} | replies received: {} ######",
-						invokeTimeout, reqType, requestHandler.getSequenceId(),
+				logger.warn("[Client {}] ###### TIMEOUT ({}s) OF REQUEST {} | seqId: {} | replies received: {} ######",
+						me, invokeTimeout, reqType, requestHandler.getSequenceId(),
 						requestHandler.getNumberReceivedReplies());
 				if (reqType == TOMMessageType.UNORDERED_HASHED_REQUEST || reqType == TOMMessageType.UNORDERED_REQUEST) {
-					return invoke(request, TOMMessageType.ORDERED_REQUEST);
+					return invoke(TOMMessageType.ORDERED_REQUEST, request, replicaSpecificContents, metadata);
 				} else {
 					return null;
 				}
 			}
 
-			TOMMessage response = requestHandler.getResponse();
-			logger.debug("Response extracted: " + response);
+			ServiceResponse response = requestHandler.getResponse();
+			logger.debug("[Client {}] Response extracted: {}", me, response);
 
 			if (response == null) {
 				//the response can be null if n-f replies are received but there isn't
 				//a replyQuorumSize of matching replies
-				logger.debug("Received n-f replies and no response could be extracted.");
+				logger.debug("[Client {}] Received n-f replies and no response could be extracted.", me);
 
 				if (reqType == TOMMessageType.UNORDERED_REQUEST || reqType == TOMMessageType.UNORDERED_HASHED_REQUEST) {
 					//invoke the operation again, whitout the read-only flag
-					logger.debug("###################RETRY#######################");
-					return invokeOrdered(request);
+					logger.debug("[Client {}] ###################RETRY#######################", me);
+					return invoke(TOMMessageType.ORDERED_REQUEST, request, replicaSpecificContents, metadata);
 				} else {
 					requestHandler.printState();
-					throw new RuntimeException("Received n-f replies without f+1 of them matching.");
+					throw new RuntimeException("[Client " + me + "] Received n-f replies without f+1 of them matching.");
 				}
 			} else {
 				if (response.getViewID() == getViewManager().getCurrentViewId()) {// normal operation
-					return response.getContent();
+					return response;
 				} else if (response.getViewID() > getViewManager().getCurrentViewId()) {
 					if (reqType == TOMMessageType.ORDERED_REQUEST) {
 						reconfigureTo((View) TOMUtil.getObject(response.getContent()));
-						return invokeOrdered(request);
+						return invoke(TOMMessageType.ORDERED_REQUEST, request, replicaSpecificContents, metadata);
 					} else if (reqType == TOMMessageType.UNORDERED_REQUEST
 							|| reqType == TOMMessageType.UNORDERED_HASHED_REQUEST) {
 						// Ignore the response and request again because servers are in a later view
-						return invokeOrdered(request);
+						return invoke(TOMMessageType.ORDERED_REQUEST, request, replicaSpecificContents, metadata);
 					} else {// Reply to a reconfigure request!
-						logger.debug("Reconfiguration request' reply received!");
+						logger.debug("[Client {}] Reconfiguration request' reply received!", me);
 						Object r = TOMUtil.getObject(response.getContent());
 						if (r instanceof View) { //did not execute the request because it is using an outdated view
 							reconfigureTo((View) r);
-							return invoke(request, reqType);
+							return invoke(reqType, request, replicaSpecificContents, metadata);
 						}  else if (r instanceof ReconfigureReply) { //reconfiguration executed!
 							reconfigureTo(((ReconfigureReply) r).getView());
-							return response.getContent();
+							return response;
 						} else{
-							logger.error("Unknown response type: {}", response.getReqType());
+							logger.error("[Client {}] Unknown response type", me);
 						}
 					}
 				} else {
-					logger.error("My view is ahead of the servers' view. This should never happen!");
+					logger.error("[Client {}] My view is ahead of the servers' view. This should never happen!", me);
 				}
 				return null;
 			}
 
 		} catch (InterruptedException e) {
-			logger.error("Failed to wait for a response. Returning null as response.", e);
+			logger.error("[Client {}] Failed to wait for a response. Returning null as response.", me, e);
 			return null;
 		} finally {
 			canSendLock.unlock(); //always release lock
@@ -291,10 +358,10 @@ public class ServiceProxy extends TOMSender {
 		int operationId = generateOperationId();
 		if (requestType == TOMMessageType.UNORDERED_HASHED_REQUEST || requestType == TOMMessageType.ORDERED_HASHED_REQUEST) {
 			int replyServer = getRandomlyServerId();
-			logger.debug("[Client {}] replyServerId({}) pos({})", getProcessId(), replyServer,
+			logger.debug("[Client {}] replyServerId({}) pos({})", me, replyServer,
 					getViewManager().getCurrentViewPos(replyServer));
 			requestHandler = new HashedRequestHandler(
-					getProcessId(),
+					me,
 					getSession(),
 					sequenceId,
 					operationId,
@@ -303,11 +370,12 @@ public class ServiceProxy extends TOMSender {
 					invokeTimeout,
 					getViewManager().getCurrentViewProcesses(),
 					replyQuorumSize,
-					replyServer
+					replyServer,
+					hashedExtractor
 			);
 		} else { // ORDERED_REQUEST or UNORDERED_REQUEST
 			requestHandler = new NormalRequestHandler(
-					getProcessId(),
+					me,
 					getSession(),
 					sequenceId,
 					operationId,
@@ -326,10 +394,12 @@ public class ServiceProxy extends TOMSender {
 
 	//******* EDUARDO BEGIN **************//
 	protected void reconfigureTo(View v) {
-		logger.debug("Installing a most up-to-date view with id=" + v.getId());
+		logger.debug("[Client {}] Installing a most up-to-date view with id={}", me, v.getId());
 		getViewManager().reconfigureTo(v);
 		getViewManager().getViewStore().storeView(v);
 		getCommunicationSystem().updateConnections();
+		if (reconfigurationListener != null)
+			reconfigurationListener.onReconfiguration(v);
 	}
 	//******* EDUARDO END **************//
 
@@ -340,34 +410,19 @@ public class ServiceProxy extends TOMSender {
 	 */
 	@Override
 	public void replyReceived(TOMMessage reply) {
-		logger.debug("Synchronously received reply from {} with sequence number {}", reply.getSender(),
+		logger.debug("[Client {}] Synchronously received reply from {} with sequence number {}", me, reply.getSender(),
 				reply.getSequence());
 		try {
 			canReceiveLock.lock();
 			requestHandler.processReply(reply);
 		} catch (Exception ex) {
-			logger.error("Problem processing reply", ex);
+			logger.error("[Client {}] Problem processing reply", me, ex);
 		} finally {
 			canReceiveLock.unlock();
 		}
 	}
 
-	/**
-	 * Retrieves the required quorum size for the amount of replies
-	 *
-	 * @return The quorum size for the amount of replies
-	 */
-	protected int getReplyQuorum() {
-		int n = getViewManager().getCurrentViewN();
-		int f = getViewManager().getCurrentViewF();
-		if (getViewManager().getStaticConf().isBFT()) {
-			// Note that a quorum ensures Linearizability when unordered requests are used
-			// f + 1 is sufficient in case the replicas' system configuration does not support unordered requests
-			return getViewManager().getStaticConf().useReadOnlyRequests() ? ((n + f) / 2 + 1) : f + 1;
-		} else {
-			return getViewManager().getStaticConf().useReadOnlyRequests() ? (n / 2 + 1) : 1;
-		}
-	}
+
 
 	private int getRandomlyServerId(){
 		int numServers = super.getViewManager().getCurrentViewProcesses().length;
