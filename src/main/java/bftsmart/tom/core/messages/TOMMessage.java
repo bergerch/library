@@ -496,10 +496,19 @@ public class TOMMessage extends SystemMessage implements Externalizable, Compara
 		if (content == null) {
 			out.writeInt(-1);
 		} else {
-			out.writeInt(content.getReplicaSpecificContent().length);
-			out.write(content.getReplicaSpecificContent());
-			out.writeInt(content.getCommonContent().length);
-			out.write(content.getCommonContent());
+			if (content.getReplicaSpecificContent() != null) {
+				out.writeInt(content.getReplicaSpecificContent().length);
+				out.write(content.getReplicaSpecificContent());
+			} else {
+				out.writeInt(-2);
+			}
+
+			if (content.getCommonContent() != null) {
+				out.writeInt(content.getCommonContent().length);
+				out.write(content.getCommonContent());
+			} else {
+				out.writeInt(-3);
+			}
 		}
 	}
 
@@ -514,13 +523,13 @@ public class TOMMessage extends SystemMessage implements Externalizable, Compara
 
 		int toRead = in.readInt();
 		if (toRead != -1) {
-			if (toRead > 0) {
+			if (toRead != -2) {
 				byte[] replicaSpecificContent = new byte[toRead];
 				in.readFully(replicaSpecificContent);
 				content.setReplicaSpecificContent(replicaSpecificContent);
 			}
 			toRead = in.readInt();
-			if (toRead > 0) {
+			if (toRead != -3) {
 				byte[] replicaCommonContent = new byte[toRead];
 				in.readFully(replicaCommonContent);
 				content.setCommonContent(replicaCommonContent);
